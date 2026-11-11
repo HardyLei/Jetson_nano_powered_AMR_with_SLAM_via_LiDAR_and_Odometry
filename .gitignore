@@ -1,5 +1,15 @@
+# VS Code
 .vscode/
 *.db
+
+# ROS2
 build/
 install/
 log/
+
+# Python
+__pycache__/
+*.pyc
+
+# Linux
+.DS_Store
