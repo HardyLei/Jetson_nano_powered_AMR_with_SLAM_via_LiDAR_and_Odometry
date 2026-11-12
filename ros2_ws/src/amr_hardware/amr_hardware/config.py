@@ -1,0 +1,4 @@
+SERIAL_PORT = '/dev/ttyUSB0'
+BAUDRATE = 115200
+
+READ_TIMEOUT = 0.1  # seconds
