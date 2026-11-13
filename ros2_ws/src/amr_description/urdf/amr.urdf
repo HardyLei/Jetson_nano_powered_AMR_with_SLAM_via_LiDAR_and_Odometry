@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com)
      Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
 <robot
@@ -8,17 +8,17 @@
     name="base_link">
     <inertial>
       <origin
-        xyz="0.00682796849696481 -5.62007759236311E-07 0.0109666635608261"
+        xyz="0.0044782147453029 -5.0141675046928E-06 -0.0136543452666141"
         rpy="0 0 0" />
       <mass
-        value="0.399226896946575" />
+        value="1.14425821971134" />
       <inertia
-        ixx="0.00039694678722816"
-        ixy="-2.73962834116167E-07"
-        ixz="1.33154281214867E-16"
-        iyy="0.000960397627356776"
-        iyz="-6.40916188104357E-15"
-        izz="0.0013078652217017" />
+        ixx="0.000779011035824372"
+        ixy="-3.98443002922969E-07"
+        ixz="-1.13246997157395E-07"
+        iyy="0.00156380548586875"
+        iyz="-3.1534699776021E-08"
+        izz="0.00170358111834897" />
     </inertial>
     <visual>
       <origin
@@ -31,7 +31,7 @@
       <material
         name="">
         <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+          rgba="0.611764705882353 0.835294117647059 1 1" />
       </material>
     </visual>
     <collision>
@@ -48,17 +48,17 @@
     name="LiDAR_Link">
     <inertial>
       <origin
-        xyz="-0.014842 -0.00031441 -0.021154"
+        xyz="-0.079672 -0.0001513 -0.16965"
         rpy="0 0 0" />
       <mass
-        value="0.031241" />
+        value="0.42927" />
       <inertia
-        ixx="8.8775E-06"
-        ixy="-1.2725E-07"
+        ixx="0.00040576"
+        ixy="-4.0121E-07"
         ixz="-1.1333E-07"
-        iyy="1.4494E-05"
+        iyy="0.0009748"
         iyz="-3.3591E-08"
-        izz="2.2529E-05" />
+        izz="0.0013302" />
     </inertial>
     <visual>
       <origin
@@ -85,7 +85,7 @@
     </collision>
   </link>
   <joint
-    name="Base-LiDAR"
+    name="base-lidar_joint"
     type="fixed">
     <origin
       xyz="0.091609 0.00013794 0.192"
@@ -98,20 +98,20 @@
       xyz="0 0 0" />
   </joint>
   <link
-    name="Front_Left_Wheel_Link">
+    name="IMU_Link">
     <inertial>
       <origin
-        xyz="-2.2356E-07 0.00069909 2.5903E-07"
+        xyz="0.006828 -5.6201E-07 -0.092633"
         rpy="0 0 0" />
       <mass
-        value="0.17845" />
+        value="0.39923" />
       <inertia
-        ixx="9.3297E-05"
-        ixy="-9.575E-10"
-        ixz="-1.3727E-10"
-        iyy="0.00014723"
-        iyz="1.1094E-09"
-        izz="9.3297E-05" />
+        ixx="0.00039695"
+        ixy="-2.7396E-07"
+        ixz="1.3304E-16"
+        iyy="0.0009604"
+        iyz="-6.4092E-15"
+        izz="0.0013079" />
     </inertial>
     <visual>
       <origin
@@ -119,7 +119,60 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://amr_description/meshes/Front_Left_Wheel_Link.STL" />
+          filename="package://amr_description/meshes/IMU_Link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://amr_description/meshes/IMU_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="base-imu_joint"
+    type="fixed">
+    <origin
+      xyz="0 0 0.1036"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="IMU_Link" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="front-left-wheel_link">
+    <inertial>
+      <origin
+        xyz="-0.052234 -0.07097 0.031893"
+        rpy="0 0 0" />
+      <mass
+        value="0.57648" />
+      <inertia
+        ixx="0.00049018"
+        ixy="-2.7274E-07"
+        ixz="1.2728E-10"
+        iyy="0.0011075"
+        iyz="8.0386E-10"
+        izz="0.001401" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://amr_description/meshes/front-left-wheel_link.STL" />
       </geometry>
       <material
         name="">
@@ -133,12 +186,12 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://amr_description/meshes/Front_Left_Wheel_Link.STL" />
+          filename="package://amr_description/meshes/front-left-wheel_link.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="Base-FrontLeft"
+    name="base-front-left-wheel_joint"
     type="continuous">
     <origin
       xyz="0.0825 0.1031 -0.0355"
@@ -146,25 +199,25 @@
     <parent
       link="base_link" />
     <child
-      link="Front_Left_Wheel_Link" />
+      link="front-left-wheel_link" />
     <axis
       xyz="0 -1 0" />
   </joint>
   <link
-    name="Rear_Left_Wheel_Link">
+    name="rear-left-wheel_link">
     <inertial>
       <origin
-        xyz="3.4091E-07 0.00069909 2.9244E-08"
+        xyz="0.061691 -0.07097 0.031892"
         rpy="0 0 0" />
       <mass
-        value="0.17845" />
+        value="0.57648" />
       <inertia
-        ixx="9.3297E-05"
-        ixy="1.4601E-09"
-        ixz="2.3633E-11"
-        iyy="0.00014723"
-        iyz="1.2527E-10"
-        izz="9.3297E-05" />
+        ixx="0.00049018"
+        ixy="-2.7316E-07"
+        ixz="-1.2674E-10"
+        iyy="0.0011075"
+        iyz="-1.2292E-09"
+        izz="0.001401" />
     </inertial>
     <visual>
       <origin
@@ -172,7 +225,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://amr_description/meshes/Rear_Left_Wheel_Link.STL" />
+          filename="package://amr_description/meshes/rear-left-wheel_link.STL" />
       </geometry>
       <material
         name="">
@@ -186,12 +239,12 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://amr_description/meshes/Rear_Left_Wheel_Link.STL" />
+          filename="package://amr_description/meshes/rear-left-wheel_link.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="Base-RearLeft"
+    name="base-rear-left-wheel_joint"
     type="continuous">
     <origin
       xyz="-0.0825 0.1031 -0.0355"
@@ -199,25 +252,25 @@
     <parent
       link="base_link" />
     <child
-      link="Rear_Left_Wheel_Link" />
+      link="rear-left-wheel_link" />
     <axis
       xyz="0 -1 0" />
   </joint>
   <link
-    name="Front_Right_Wheel_Link">
+    name="front-right-wheel_link">
     <inertial>
       <origin
-        xyz="-2.5283E-07 -0.00069909 -2.3054E-07"
+        xyz="-0.052234 0.070969 0.031892"
         rpy="0 0 0" />
       <mass
-        value="0.17845" />
+        value="0.57648" />
       <inertia
-        ixx="9.3297E-05"
-        ixy="1.0829E-09"
-        ixz="1.3817E-10"
-        iyy="0.00014723"
-        iyz="9.8737E-10"
-        izz="9.3297E-05" />
+        ixx="0.00049018"
+        ixy="-2.7293E-07"
+        ixz="1.3874E-10"
+        iyy="0.0011075"
+        iyz="1.0437E-09"
+        izz="0.001401" />
     </inertial>
     <visual>
       <origin
@@ -225,7 +278,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://amr_description/meshes/Front_Right_Wheel_Link.STL" />
+          filename="package://amr_description/meshes/front-right-wheel_link.STL" />
       </geometry>
       <material
         name="">
@@ -239,12 +292,12 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://amr_description/meshes/Front_Right_Wheel_Link.STL" />
+          filename="package://amr_description/meshes/front-right-wheel_link.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="Base-FrontRight"
+    name="base-front-right-wheel_joint"
     type="continuous">
     <origin
       xyz="0.0825 -0.1031 -0.0355"
@@ -252,25 +305,25 @@
     <parent
       link="base_link" />
     <child
-      link="Front_Right_Wheel_Link" />
+      link="front-right-wheel_link" />
     <axis
       xyz="0 1 0" />
   </joint>
   <link
-    name="Rear_Right_Wheel_Link">
+    name="rear-right-wheel_link">
     <inertial>
       <origin
-        xyz="3.4216E-07 -0.00069909 2.3722E-11"
+        xyz="0.061691 0.070969 0.031892"
         rpy="0 0 0" />
       <mass
-        value="0.17845" />
+        value="0.57648" />
       <inertia
-        ixx="9.3297E-05"
-        ixy="-1.4654E-09"
-        ixz="1.8224E-14"
-        iyy="0.00014723"
-        iyz="-7.7333E-14"
-        izz="9.3297E-05" />
+        ixx="0.00049018"
+        ixy="-2.7424E-07"
+        ixz="-5.2383E-11"
+        iyy="0.0011075"
+        iyz="1.4381E-09"
+        izz="0.001401" />
     </inertial>
     <visual>
       <origin
@@ -278,7 +331,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://amr_description/meshes/Rear_Right_Wheel_Link.STL" />
+          filename="package://amr_description/meshes/rear-right-wheel_link.STL" />
       </geometry>
       <material
         name="">
@@ -292,12 +345,12 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://amr_description/meshes/Rear_Right_Wheel_Link.STL" />
+          filename="package://amr_description/meshes/rear-right-wheel_link.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="Base-RearRight"
+    name="base-rear-right-wheel_joint"
     type="continuous">
     <origin
       xyz="-0.0825 -0.1031 -0.0355"
@@ -305,7 +358,7 @@
     <parent
       link="base_link" />
     <child
-      link="Rear_Right_Wheel_Link" />
+      link="rear-right-wheel_link" />
     <axis
       xyz="0 1 0" />
   </joint>

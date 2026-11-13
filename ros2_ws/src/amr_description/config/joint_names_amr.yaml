@@ -1,1 +1,1 @@
-controller_joint_names: ['', 'Base-FrontLeft', 'Base-RearLeft', 'Base-FrontRight', 'Base-RearRight', ]
+controller_joint_names: ['', 'base-front-left-wheel_joint', 'base-rear-left-wheel_joint', 'base-front-right-wheel_joint', 'base-rear-right-wheel_joint', ]
