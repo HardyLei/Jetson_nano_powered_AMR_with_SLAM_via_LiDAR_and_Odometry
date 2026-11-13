@@ -16,12 +16,14 @@ RUN apt update && apt install -y \
 
 COPY ros2_ws/src/YDLidar-SDK /tmp/YDLidar-SDK
 
+ARG CMAKE_BUILD_PARALLEL_LEVEL=1
+
 RUN cmake -S /tmp/YDLidar-SDK -B /tmp/YDLidar-SDK/build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr/local \
     -DBUILD_EXAMPLES=OFF \
     -DBUILD_TEST=OFF \
-    && cmake --build /tmp/YDLidar-SDK/build --parallel "$(nproc)" \
+    && cmake --build /tmp/YDLidar-SDK/build --parallel "${CMAKE_BUILD_PARALLEL_LEVEL}" \
     && cmake --install /tmp/YDLidar-SDK/build \
     && rm -rf /tmp/YDLidar-SDK
 
