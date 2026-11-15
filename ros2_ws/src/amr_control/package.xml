@@ -7,6 +7,14 @@
   <maintainer email="luh0519@connect.hku.hk">uhang</maintainer>
   <license>Apache-2.0</license>
 
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>amr_interfaces</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_mypy</test_depend>

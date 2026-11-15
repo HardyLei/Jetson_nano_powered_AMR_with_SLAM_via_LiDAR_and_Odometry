@@ -44,3 +44,15 @@ class MecanumController(Node):
         )
         
         self.wheel_speed_publisher.publish(wheel_speed_msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = MecanumController()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

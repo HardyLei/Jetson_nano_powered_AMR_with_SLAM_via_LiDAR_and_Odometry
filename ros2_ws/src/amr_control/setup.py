@@ -25,6 +25,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'odometry_node = amr_control.odometry_node:main',
+            'mecanum_controller = amr_control.mecanum_controller:main',
         ],
     },
 )
