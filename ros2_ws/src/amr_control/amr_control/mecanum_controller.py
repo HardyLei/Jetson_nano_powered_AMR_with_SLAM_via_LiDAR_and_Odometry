@@ -9,11 +9,33 @@ from geometry_msgs.msg import Twist
 class MecanumController(Node):
     def __init__(self):
         super().__init__('mecanum_controller')
-        self.wheel_speed_publisher = self.create_publisher(WheelSpeed, '/wheel_speed_cmd', 10)
+
+        self.declare_parameter('wheel_radius', 0.05)
+        self.declare_parameter('wheel_base_x', 0.0825)
+        self.declare_parameter('wheel_base_y', 0.1031)
+        self.declare_parameter('cmd_vel_topic', '/cmd_vel')
+        self.declare_parameter('wheel_speed_topic', '/wheel_speed_cmd')
+
+        self.wheel_radius = self.get_parameter('wheel_radius').value
+        self.wheel_base_x = self.get_parameter('wheel_base_x').value
+        self.wheel_base_y = self.get_parameter('wheel_base_y').value
+        self.cmd_vel_topic = self.get_parameter('cmd_vel_topic').value
+        self.wheel_speed_topic = self.get_parameter('wheel_speed_topic').value
+
+        if self.wheel_radius <= 0 or self.wheel_base_x + self.wheel_base_y <= 0:
+            raise ValueError(
+                'wheel_radius and wheel_base_x + wheel_base_y must be positive'
+            )
+
+        self.wheel_speed_publisher = self.create_publisher(
+            WheelSpeed,
+            self.wheel_speed_topic,
+            10
+        )
 
         self.cmd_vel_subscription = self.create_subscription(
             Twist,
-            '/cmd_vel',
+            self.cmd_vel_topic,
             self.cmd_vel_callback,
             10
         )
@@ -24,17 +46,13 @@ class MecanumController(Node):
         vy = msg.linear.y
         wz = msg.angular.z
 
-        R = 0.05  # Wheel radius in meters
-        L = 0.0825  # Distance from the center of the robot to the wheel along the x-axis
-        W = 0.1031  # Distance from the center of the robot to the wheel along the y-axis
-
-        k = L + W
+        k = self.wheel_base_x + self.wheel_base_y
 
         # inverse kinematics for mecanum wheels
-        fl = (vx - vy - k*wz) / R
-        fr = (vx + vy + k*wz) / R
-        rl = (vx + vy - k*wz) / R
-        rr = (vx - vy + k*wz) / R
+        fl = (vx - vy - k*wz) / self.wheel_radius
+        fr = (vx + vy + k*wz) / self.wheel_radius
+        rl = (vx + vy - k*wz) / self.wheel_radius
+        rr = (vx - vy + k*wz) / self.wheel_radius
 
         wheel_speed_msg = WheelSpeed(
             front_left=fl,

@@ -22,11 +22,28 @@ class OdometryNode(Node):
         # Robot parameters
         # --------------------
 
-        self.wheel_radius = 0.05      # m
-        self.L = 0.0825               # front/rear wheel offset
-        self.W = 0.1031               # left/right wheel offset
+        self.declare_parameter('wheel_radius', 0.05)
+        self.declare_parameter('wheel_base_x', 0.0825)
+        self.declare_parameter('wheel_base_y', 0.1031)
+        self.declare_parameter('ticks_per_revolution', 2048)
+        self.declare_parameter('encoder_topic', '/encoder_ticks')
+        self.declare_parameter('odometry_topic', '/odom')
+        self.declare_parameter('odom_frame', 'odom')
+        self.declare_parameter('base_frame', 'base_link')
 
-        self.ticks_per_rev = 2048
+        self.wheel_radius = self.get_parameter('wheel_radius').value
+        self.L = self.get_parameter('wheel_base_x').value
+        self.W = self.get_parameter('wheel_base_y').value
+        self.ticks_per_rev = self.get_parameter('ticks_per_revolution').value
+        self.encoder_topic = self.get_parameter('encoder_topic').value
+        self.odometry_topic = self.get_parameter('odometry_topic').value
+        self.odom_frame = self.get_parameter('odom_frame').value
+        self.base_frame = self.get_parameter('base_frame').value
+
+        if self.wheel_radius <= 0 or self.L + self.W <= 0:
+            raise ValueError('wheel_radius and wheel_base_x + wheel_base_y must be positive')
+        if self.ticks_per_rev <= 0:
+            raise ValueError('ticks_per_revolution must be positive')
 
         # --------------------
         # Robot pose
@@ -49,14 +66,14 @@ class OdometryNode(Node):
 
         self.encoder_sub = self.create_subscription(
             EncoderTicks,
-            '/encoder_ticks',
+            self.encoder_topic,
             self.encoder_callback,
             10
         )
 
         self.odom_pub = self.create_publisher(
             Odometry,
-            '/odom',
+            self.odometry_topic,
             10
         )
 
@@ -115,8 +132,8 @@ class OdometryNode(Node):
     def publish_odometry(self, current_time, vx, vy, wz):
                 odom_msg = Odometry()
                 odom_msg.header.stamp = current_time.to_msg()
-                odom_msg.header.frame_id = 'odom'
-                odom_msg.child_frame_id = 'base_link'
+                odom_msg.header.frame_id = self.odom_frame
+                odom_msg.child_frame_id = self.base_frame
                 odom_msg.pose.pose.position.x = self.x
                 odom_msg.pose.pose.position.y = self.y
                 odom_msg.pose.pose.position.z = 0.0
@@ -134,8 +151,8 @@ class OdometryNode(Node):
     def publish_tf(self, current_time, q):
         t = TransformStamped()
         t.header.stamp = current_time.to_msg()
-        t.header.frame_id = 'odom'
-        t.child_frame_id = 'base_link'
+        t.header.frame_id = self.odom_frame
+        t.child_frame_id = self.base_frame
         t.transform.translation.x = self.x
         t.transform.translation.y = self.y
         t.transform.translation.z = 0.0
