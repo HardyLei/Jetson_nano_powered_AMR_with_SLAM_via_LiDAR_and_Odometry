@@ -56,7 +56,10 @@ const uint8_t DRIVE_PWM_D = 142;
 // ---------------- Closed-loop speed control -------------
 // The calibrated PWM values produce about 115 counts in 50 ms.
 const unsigned long SPEED_CONTROL_INTERVAL_MS = 50;
-const int TARGET_COUNTS_PER_INTERVAL = 115;
+// Initial straight-line trim: reduce the left side slightly because the
+// robot was drifting right under load.
+const int TARGET_LEFT_COUNTS_PER_INTERVAL = 114;
+const int TARGET_RIGHT_COUNTS_PER_INTERVAL = 115;
 const float SPEED_CONTROL_KP = 0.8f;
 
 bool motorAActive = false, motorBActive = false;
@@ -182,8 +185,8 @@ void readNormalizedCounts(long &a, long &b, long &c, long &d) {
   interrupts();
 }
 
-int adjustPwm(int pwm, long measuredCounts) {
-  long error = TARGET_COUNTS_PER_INTERVAL - measuredCounts;
+int adjustPwm(int pwm, long measuredCounts, int targetCounts) {
+  long error = targetCounts - measuredCounts;
   pwm += (int)(SPEED_CONTROL_KP * error);
   return constrain(pwm, 0, 255);
 }
@@ -211,19 +214,19 @@ void updateSpeedControl() {
   long deltaD = labs(d - lastControlD);
 
   if (motorAActive) {
-    pwmA = adjustPwm(pwmA, deltaA);
+    pwmA = adjustPwm(pwmA, deltaA, TARGET_LEFT_COUNTS_PER_INTERVAL);
     analogWrite(PWMA, pwmA);
   }
   if (motorBActive) {
-    pwmB = adjustPwm(pwmB, deltaB);
+    pwmB = adjustPwm(pwmB, deltaB, TARGET_RIGHT_COUNTS_PER_INTERVAL);
     analogWrite(PWMB, pwmB);
   }
   if (motorCActive) {
-    pwmC = adjustPwm(pwmC, deltaC);
+    pwmC = adjustPwm(pwmC, deltaC, TARGET_LEFT_COUNTS_PER_INTERVAL);
     analogWrite(PWMC, pwmC);
   }
   if (motorDActive) {
-    pwmD = adjustPwm(pwmD, deltaD);
+    pwmD = adjustPwm(pwmD, deltaD, TARGET_RIGHT_COUNTS_PER_INTERVAL);
     analogWrite(PWMD, pwmD);
   }
 
