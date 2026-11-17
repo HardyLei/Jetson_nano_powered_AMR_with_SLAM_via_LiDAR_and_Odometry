@@ -45,7 +45,13 @@
 #define ENC_D_B  A1
 
 // ---------------- Speed ---------------------------------
-const int DRIVE_PWM = 150; 
+// Open-loop calibration from encoder measurements at the same commanded speed.
+// Re-test these values under load; closed-loop control is required for full
+// compensation when the load or battery voltage changes.
+const uint8_t DRIVE_PWM_A = 151;
+const uint8_t DRIVE_PWM_B = 139;
+const uint8_t DRIVE_PWM_C = 173;
+const uint8_t DRIVE_PWM_D = 142;
 
 // ---------------- Encoder counters ----------------------
 volatile long encA = 0, encB = 0, encC = 0, encD = 0;
@@ -53,20 +59,20 @@ volatile long encA = 0, encB = 0, encC = 0, encD = 0;
 // ---------------- Motor helper macros -------------------
 // Note: DIRA and DIRC logic is inverted compared to B and D to account for physical motor mounting
 
-#define MOTORA_FORWARD()  do{digitalWrite(DIRA1,HIGH); digitalWrite(DIRA2,LOW);  analogWrite(PWMA,DRIVE_PWM);}while(0)
-#define MOTORA_BACKOFF()  do{digitalWrite(DIRA1,LOW);  digitalWrite(DIRA2,HIGH); analogWrite(PWMA,DRIVE_PWM);}while(0)
+#define MOTORA_FORWARD()  do{digitalWrite(DIRA1,HIGH); digitalWrite(DIRA2,LOW);  analogWrite(PWMA,DRIVE_PWM_A);}while(0)
+#define MOTORA_BACKOFF()  do{digitalWrite(DIRA1,LOW);  digitalWrite(DIRA2,HIGH); analogWrite(PWMA,DRIVE_PWM_A);}while(0)
 #define MOTORA_STOP()     do{digitalWrite(DIRA1,LOW);  digitalWrite(DIRA2,LOW);  analogWrite(PWMA,0);}while(0)
 
-#define MOTORB_FORWARD()  do{digitalWrite(DIRB1,LOW);  digitalWrite(DIRB2,HIGH); analogWrite(PWMB,DRIVE_PWM);}while(0)
-#define MOTORB_BACKOFF()  do{digitalWrite(DIRB1,HIGH); digitalWrite(DIRB2,LOW);  analogWrite(PWMB,DRIVE_PWM);}while(0)
+#define MOTORB_FORWARD()  do{digitalWrite(DIRB1,LOW);  digitalWrite(DIRB2,HIGH); analogWrite(PWMB,DRIVE_PWM_B);}while(0)
+#define MOTORB_BACKOFF()  do{digitalWrite(DIRB1,HIGH); digitalWrite(DIRB2,LOW);  analogWrite(PWMB,DRIVE_PWM_B);}while(0)
 #define MOTORB_STOP()     do{digitalWrite(DIRB1,LOW);  digitalWrite(DIRB2,LOW);  analogWrite(PWMB,0);}while(0)
 
-#define MOTORC_FORWARD()  do{digitalWrite(DIRC1,HIGH); digitalWrite(DIRC2,LOW);  analogWrite(PWMC,DRIVE_PWM);}while(0)
-#define MOTORC_BACKOFF()  do{digitalWrite(DIRC1,LOW);  digitalWrite(DIRC2,HIGH); analogWrite(PWMC,DRIVE_PWM);}while(0)
+#define MOTORC_FORWARD()  do{digitalWrite(DIRC1,HIGH); digitalWrite(DIRC2,LOW);  analogWrite(PWMC,DRIVE_PWM_C);}while(0)
+#define MOTORC_BACKOFF()  do{digitalWrite(DIRC1,LOW);  digitalWrite(DIRC2,HIGH); analogWrite(PWMC,DRIVE_PWM_C);}while(0)
 #define MOTORC_STOP()     do{digitalWrite(DIRC1,LOW);  digitalWrite(DIRC2,LOW);  analogWrite(PWMC,0);}while(0)
 
-#define MOTORD_FORWARD()  do{digitalWrite(DIRD1,LOW);  digitalWrite(DIRD2,HIGH); analogWrite(PWMD,DRIVE_PWM);}while(0)
-#define MOTORD_BACKOFF()  do{digitalWrite(DIRD1,HIGH); digitalWrite(DIRD2,LOW);  analogWrite(PWMD,DRIVE_PWM);}while(0)
+#define MOTORD_FORWARD()  do{digitalWrite(DIRD1,LOW);  digitalWrite(DIRD2,HIGH); analogWrite(PWMD,DRIVE_PWM_D);}while(0)
+#define MOTORD_BACKOFF()  do{digitalWrite(DIRD1,HIGH); digitalWrite(DIRD2,LOW);  analogWrite(PWMD,DRIVE_PWM_D);}while(0)
 #define MOTORD_STOP()     do{digitalWrite(DIRD1,LOW);  digitalWrite(DIRD2,LOW);  analogWrite(PWMD,0);}while(0)
 
 // ---------------- Motion primitives ---------------------
