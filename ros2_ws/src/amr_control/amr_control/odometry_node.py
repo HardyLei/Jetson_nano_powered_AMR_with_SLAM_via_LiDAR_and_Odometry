@@ -25,7 +25,7 @@ class OdometryNode(Node):
         self.declare_parameter('wheel_radius', 0.04)
         self.declare_parameter('wheel_base_x', 0.0825)
         self.declare_parameter('wheel_base_y', 0.1031)
-        self.declare_parameter('ticks_per_revolution', 2048)
+        self.declare_parameter('ticks_per_revolution', 660)
         self.declare_parameter('encoder_topic', '/encoder_ticks')
         self.declare_parameter('odometry_topic', '/odom')
         self.declare_parameter('odom_frame', 'odom')

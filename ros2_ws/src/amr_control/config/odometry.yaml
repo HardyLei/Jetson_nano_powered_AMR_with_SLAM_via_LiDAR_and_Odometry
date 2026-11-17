@@ -3,7 +3,7 @@ odometry_node:
     wheel_radius: 0.04
     wheel_base_x: 0.0825
     wheel_base_y: 0.1031
-    ticks_per_revolution: 2048
+    ticks_per_revolution: 660
     encoder_topic: /encoder_ticks
     odometry_topic: /odom
     odom_frame: odom
