@@ -53,27 +53,104 @@ const uint8_t DRIVE_PWM_B = 139;
 const uint8_t DRIVE_PWM_C = 173;
 const uint8_t DRIVE_PWM_D = 142;
 
+// ---------------- Closed-loop speed control -------------
+// The calibrated PWM values produce about 115 counts in 50 ms.
+const unsigned long SPEED_CONTROL_INTERVAL_MS = 50;
+const int TARGET_COUNTS_PER_INTERVAL = 115;
+const float SPEED_CONTROL_KP = 0.8f;
+
+bool motorAActive = false, motorBActive = false;
+bool motorCActive = false, motorDActive = false;
+int pwmA = DRIVE_PWM_A, pwmB = DRIVE_PWM_B;
+int pwmC = DRIVE_PWM_C, pwmD = DRIVE_PWM_D;
+
+unsigned long lastSpeedControl = 0;
+long lastControlA = 0, lastControlB = 0;
+long lastControlC = 0, lastControlD = 0;
+bool speedControlInitialized = false;
+
+void restartSpeedControl() {
+  speedControlInitialized = false;
+}
+
 // ---------------- Encoder counters ----------------------
 volatile long encA = 0, encB = 0, encC = 0, encD = 0;
 
 // ---------------- Motor helper macros -------------------
 // Note: DIRA and DIRC logic is inverted compared to B and D to account for physical motor mounting
 
-#define MOTORA_FORWARD()  do{digitalWrite(DIRA1,HIGH); digitalWrite(DIRA2,LOW);  analogWrite(PWMA,DRIVE_PWM_A);}while(0)
-#define MOTORA_BACKOFF()  do{digitalWrite(DIRA1,LOW);  digitalWrite(DIRA2,HIGH); analogWrite(PWMA,DRIVE_PWM_A);}while(0)
-#define MOTORA_STOP()     do{digitalWrite(DIRA1,LOW);  digitalWrite(DIRA2,LOW);  analogWrite(PWMA,0);}while(0)
+void motorAForward() {
+  digitalWrite(DIRA1, HIGH); digitalWrite(DIRA2, LOW);
+  pwmA = DRIVE_PWM_A; analogWrite(PWMA, pwmA); motorAActive = true;
+  restartSpeedControl();
+}
+void motorABackoff() {
+  digitalWrite(DIRA1, LOW); digitalWrite(DIRA2, HIGH);
+  pwmA = DRIVE_PWM_A; analogWrite(PWMA, pwmA); motorAActive = true;
+  restartSpeedControl();
+}
+void motorAStop() {
+  digitalWrite(DIRA1, LOW); digitalWrite(DIRA2, LOW);
+  analogWrite(PWMA, 0); motorAActive = false; restartSpeedControl();
+}
 
-#define MOTORB_FORWARD()  do{digitalWrite(DIRB1,LOW);  digitalWrite(DIRB2,HIGH); analogWrite(PWMB,DRIVE_PWM_B);}while(0)
-#define MOTORB_BACKOFF()  do{digitalWrite(DIRB1,HIGH); digitalWrite(DIRB2,LOW);  analogWrite(PWMB,DRIVE_PWM_B);}while(0)
-#define MOTORB_STOP()     do{digitalWrite(DIRB1,LOW);  digitalWrite(DIRB2,LOW);  analogWrite(PWMB,0);}while(0)
+void motorBForward() {
+  digitalWrite(DIRB1, LOW); digitalWrite(DIRB2, HIGH);
+  pwmB = DRIVE_PWM_B; analogWrite(PWMB, pwmB); motorBActive = true;
+  restartSpeedControl();
+}
+void motorBBackoff() {
+  digitalWrite(DIRB1, HIGH); digitalWrite(DIRB2, LOW);
+  pwmB = DRIVE_PWM_B; analogWrite(PWMB, pwmB); motorBActive = true;
+  restartSpeedControl();
+}
+void motorBStop() {
+  digitalWrite(DIRB1, LOW); digitalWrite(DIRB2, LOW);
+  analogWrite(PWMB, 0); motorBActive = false; restartSpeedControl();
+}
 
-#define MOTORC_FORWARD()  do{digitalWrite(DIRC1,HIGH); digitalWrite(DIRC2,LOW);  analogWrite(PWMC,DRIVE_PWM_C);}while(0)
-#define MOTORC_BACKOFF()  do{digitalWrite(DIRC1,LOW);  digitalWrite(DIRC2,HIGH); analogWrite(PWMC,DRIVE_PWM_C);}while(0)
-#define MOTORC_STOP()     do{digitalWrite(DIRC1,LOW);  digitalWrite(DIRC2,LOW);  analogWrite(PWMC,0);}while(0)
+void motorCForward() {
+  digitalWrite(DIRC1, HIGH); digitalWrite(DIRC2, LOW);
+  pwmC = DRIVE_PWM_C; analogWrite(PWMC, pwmC); motorCActive = true;
+  restartSpeedControl();
+}
+void motorCBackoff() {
+  digitalWrite(DIRC1, LOW); digitalWrite(DIRC2, HIGH);
+  pwmC = DRIVE_PWM_C; analogWrite(PWMC, pwmC); motorCActive = true;
+  restartSpeedControl();
+}
+void motorCStop() {
+  digitalWrite(DIRC1, LOW); digitalWrite(DIRC2, LOW);
+  analogWrite(PWMC, 0); motorCActive = false; restartSpeedControl();
+}
 
-#define MOTORD_FORWARD()  do{digitalWrite(DIRD1,LOW);  digitalWrite(DIRD2,HIGH); analogWrite(PWMD,DRIVE_PWM_D);}while(0)
-#define MOTORD_BACKOFF()  do{digitalWrite(DIRD1,HIGH); digitalWrite(DIRD2,LOW);  analogWrite(PWMD,DRIVE_PWM_D);}while(0)
-#define MOTORD_STOP()     do{digitalWrite(DIRD1,LOW);  digitalWrite(DIRD2,LOW);  analogWrite(PWMD,0);}while(0)
+void motorDForward() {
+  digitalWrite(DIRD1, LOW); digitalWrite(DIRD2, HIGH);
+  pwmD = DRIVE_PWM_D; analogWrite(PWMD, pwmD); motorDActive = true;
+  restartSpeedControl();
+}
+void motorDBackoff() {
+  digitalWrite(DIRD1, HIGH); digitalWrite(DIRD2, LOW);
+  pwmD = DRIVE_PWM_D; analogWrite(PWMD, pwmD); motorDActive = true;
+  restartSpeedControl();
+}
+void motorDStop() {
+  digitalWrite(DIRD1, LOW); digitalWrite(DIRD2, LOW);
+  analogWrite(PWMD, 0); motorDActive = false; restartSpeedControl();
+}
+
+#define MOTORA_FORWARD()  motorAForward()
+#define MOTORA_BACKOFF()  motorABackoff()
+#define MOTORA_STOP()     motorAStop()
+#define MOTORB_FORWARD()  motorBForward()
+#define MOTORB_BACKOFF()  motorBBackoff()
+#define MOTORB_STOP()     motorBStop()
+#define MOTORC_FORWARD()  motorCForward()
+#define MOTORC_BACKOFF()  motorCBackoff()
+#define MOTORC_STOP()     motorCStop()
+#define MOTORD_FORWARD()  motorDForward()
+#define MOTORD_BACKOFF()  motorDBackoff()
+#define MOTORD_STOP()     motorDStop()
 
 // ---------------- Motion primitives ---------------------
 void advance()   { MOTORA_FORWARD(); MOTORB_FORWARD(); MOTORC_FORWARD(); MOTORD_FORWARD(); }
@@ -95,6 +172,64 @@ void isrEncA() { encA += (digitalRead(ENC_A_A) == digitalRead(ENC_A_B)) ? -1 : +
 void isrEncB() { encB += (digitalRead(ENC_B_A) == digitalRead(ENC_B_B)) ? -1 : +1; }
 void isrEncC() { encC += (digitalRead(ENC_C_A) == digitalRead(ENC_C_B)) ? -1 : +1; }
 void isrEncD() { encD += (digitalRead(ENC_D_A) == digitalRead(ENC_D_B)) ? -1 : +1; }
+
+void readNormalizedCounts(long &a, long &b, long &c, long &d) {
+  noInterrupts();
+  a = -encA;
+  b = encB;
+  c = -encC;
+  d = encD;
+  interrupts();
+}
+
+int adjustPwm(int pwm, long measuredCounts) {
+  long error = TARGET_COUNTS_PER_INTERVAL - measuredCounts;
+  pwm += (int)(SPEED_CONTROL_KP * error);
+  return constrain(pwm, 0, 255);
+}
+
+void updateSpeedControl() {
+  unsigned long now = millis();
+  if (now - lastSpeedControl < SPEED_CONTROL_INTERVAL_MS) {
+    return;
+  }
+  lastSpeedControl = now;
+
+  long a, b, c, d;
+  readNormalizedCounts(a, b, c, d);
+
+  if (!speedControlInitialized) {
+    lastControlA = a; lastControlB = b;
+    lastControlC = c; lastControlD = d;
+    speedControlInitialized = true;
+    return;
+  }
+
+  long deltaA = labs(a - lastControlA);
+  long deltaB = labs(b - lastControlB);
+  long deltaC = labs(c - lastControlC);
+  long deltaD = labs(d - lastControlD);
+
+  if (motorAActive) {
+    pwmA = adjustPwm(pwmA, deltaA);
+    analogWrite(PWMA, pwmA);
+  }
+  if (motorBActive) {
+    pwmB = adjustPwm(pwmB, deltaB);
+    analogWrite(PWMB, pwmB);
+  }
+  if (motorCActive) {
+    pwmC = adjustPwm(pwmC, deltaC);
+    analogWrite(PWMC, pwmC);
+  }
+  if (motorDActive) {
+    pwmD = adjustPwm(pwmD, deltaD);
+    analogWrite(PWMD, pwmD);
+  }
+
+  lastControlA = a; lastControlB = b;
+  lastControlC = c; lastControlD = d;
+}
 
 // ---------------- ASCII Visualizer ----------------------
 void printVisual(char A, char B, char C, char D) {
@@ -183,18 +318,16 @@ void loop() {
     }
   }
 
-  // 2. Report encoder counts every 2500 ms (2.5 seconds)
+  // 2. Adjust active motor PWMs to maintain equal encoder speed.
+  updateSpeedControl();
+
+  // 3. Report encoder counts every 2500 ms (2.5 seconds)
   if (millis() - lastReport >= 2500) {
     lastReport = millis();
     
-    // Disable interrupts briefly to safely copy the 32-bit values
-    noInterrupts();
     // Normalize encoder signs so forward wheel motion is positive.
-    long a = -encA;
-    long b = encB;
-    long c = -encC;
-    long d = encD;
-    interrupts();
+    long a, b, c, d;
+    readNormalizedCounts(a, b, c, d);
 
     // Print to PC
     Serial.print(F("ENC,"));
