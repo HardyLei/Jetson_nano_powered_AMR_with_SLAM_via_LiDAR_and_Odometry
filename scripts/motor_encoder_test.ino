@@ -183,9 +183,10 @@ void loop() {
     
     // Disable interrupts briefly to safely copy the 32-bit values
     noInterrupts();
-    long a = encA;
+    // Normalize encoder signs so forward wheel motion is positive.
+    long a = -encA;
     long b = encB;
-    long c = encC;
+    long c = -encC;
     long d = encD;
     interrupts();
 

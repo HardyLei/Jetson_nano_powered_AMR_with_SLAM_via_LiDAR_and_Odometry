@@ -151,9 +151,10 @@ void readCommands() {
 
 void reportEncoders() {
   noInterrupts();
-  long fl = encA;
+  // Normalize encoder signs so forward wheel motion is positive.
+  long fl = -encA;
   long fr = encB;
-  long rl = encC;
+  long rl = -encC;
   long rr = encD;
   interrupts();
 
