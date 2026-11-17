@@ -56,11 +56,18 @@ const uint8_t DRIVE_PWM_D = 142;
 // ---------------- Closed-loop speed control -------------
 // The calibrated PWM values produce about 115 counts in 50 ms.
 const unsigned long SPEED_CONTROL_INTERVAL_MS = 50;
-// Initial straight-line trim: reduce the left side slightly because the
-// robot was drifting right under load.
-const int TARGET_LEFT_COUNTS_PER_INTERVAL = 114;
-const int TARGET_RIGHT_COUNTS_PER_INTERVAL = 115;
-const float SPEED_CONTROL_KP = 0.8f;
+const int TARGET_COUNTS_PER_INTERVAL = 115;
+const float SPEED_CONTROL_KP = 0.9f;
+
+// Steering trim for straight-line driving.
+// The speed controller equalizes every wheel to the same encoder count, but
+// unequal tire diameters, grip, or friction can still make the chassis veer.
+// This raises (or lowers) the target speed of the RIGHT-side wheels (B and D)
+// relative to the LEFT-side wheels (A and C):
+//   STEER_TRIM > 0 -> right wheels faster -> car steers LEFT  (fixes drift to the RIGHT)
+//   STEER_TRIM < 0 -> car steers RIGHT
+// Tune in small steps (a few %) until the car tracks straight.
+const float STEER_TRIM = 0.04f;   // +4% right-side target boost
 
 bool motorAActive = false, motorBActive = false;
 bool motorCActive = false, motorDActive = false;
@@ -213,20 +220,23 @@ void updateSpeedControl() {
   long deltaC = labs(c - lastControlC);
   long deltaD = labs(d - lastControlD);
 
+  int targetLeft  = TARGET_COUNTS_PER_INTERVAL;
+  int targetRight = (int)(TARGET_COUNTS_PER_INTERVAL * (1.0f + STEER_TRIM));
+
   if (motorAActive) {
-    pwmA = adjustPwm(pwmA, deltaA, TARGET_LEFT_COUNTS_PER_INTERVAL);
+    pwmA = adjustPwm(pwmA, deltaA, targetLeft);
     analogWrite(PWMA, pwmA);
   }
   if (motorBActive) {
-    pwmB = adjustPwm(pwmB, deltaB, TARGET_RIGHT_COUNTS_PER_INTERVAL);
+    pwmB = adjustPwm(pwmB, deltaB, targetRight);
     analogWrite(PWMB, pwmB);
   }
   if (motorCActive) {
-    pwmC = adjustPwm(pwmC, deltaC, TARGET_LEFT_COUNTS_PER_INTERVAL);
+    pwmC = adjustPwm(pwmC, deltaC, targetLeft);
     analogWrite(PWMC, pwmC);
   }
   if (motorDActive) {
-    pwmD = adjustPwm(pwmD, deltaD, TARGET_RIGHT_COUNTS_PER_INTERVAL);
+    pwmD = adjustPwm(pwmD, deltaD, targetRight);
     analogWrite(PWMD, pwmD);
   }
 
