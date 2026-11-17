@@ -1,6 +1,6 @@
 mecanum_controller:
   ros__parameters:
-    wheel_radius: 0.05
+    wheel_radius: 0.04
     wheel_base_x: 0.0825
     wheel_base_y: 0.1031
     cmd_vel_topic: /cmd_vel

@@ -1,6 +1,6 @@
 odometry_node:
   ros__parameters:
-    wheel_radius: 0.05
+    wheel_radius: 0.04
     wheel_base_x: 0.0825
     wheel_base_y: 0.1031
     ticks_per_revolution: 2048

@@ -22,7 +22,7 @@ class OdometryNode(Node):
         # Robot parameters
         # --------------------
 
-        self.declare_parameter('wheel_radius', 0.05)
+        self.declare_parameter('wheel_radius', 0.04)
         self.declare_parameter('wheel_base_x', 0.0825)
         self.declare_parameter('wheel_base_y', 0.1031)
         self.declare_parameter('ticks_per_revolution', 2048)

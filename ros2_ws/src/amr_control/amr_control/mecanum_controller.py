@@ -10,7 +10,7 @@ class MecanumController(Node):
     def __init__(self):
         super().__init__('mecanum_controller')
 
-        self.declare_parameter('wheel_radius', 0.05)
+        self.declare_parameter('wheel_radius', 0.04)
         self.declare_parameter('wheel_base_x', 0.0825)
         self.declare_parameter('wheel_base_y', 0.1031)
         self.declare_parameter('cmd_vel_topic', '/cmd_vel')
