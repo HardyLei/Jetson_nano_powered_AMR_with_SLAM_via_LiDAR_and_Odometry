@@ -13,3 +13,5 @@ __pycache__/
 
 # Linux
 .DS_Store
+# Saved runtime maps
+ros2_ws/maps/

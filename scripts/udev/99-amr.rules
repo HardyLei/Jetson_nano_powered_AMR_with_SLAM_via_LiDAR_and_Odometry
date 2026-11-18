@@ -1,0 +1,9 @@
+# Untested template. Copy to a local file and substitute your own USB paths.
+# ID_PATH distinguishes devices with identical USB bridges on different sockets.
+# Read ID_PATH using: udevadm info -q property -n /dev/ttyUSB0
+# To match a unique serial instead, use ENV{ID_SERIAL_SHORT} together with
+# ENV{ID_VENDOR_ID} and ENV{ID_MODEL_ID}. Keep the device on the matched socket
+# if using ID_PATH. Pass the completed file to scripts/install_udev.sh.
+SUBSYSTEM=="tty", ENV{ID_PATH}=="___LIDAR_USB_PATH___", SYMLINK+="ydlidar", GROUP="dialout", MODE="0660"
+SUBSYSTEM=="tty", ENV{ID_PATH}=="___IMU_USB_PATH___", SYMLINK+="myimu", GROUP="dialout", MODE="0660"
+SUBSYSTEM=="tty", ENV{ID_PATH}=="___ARDUINO_USB_PATH___", SYMLINK+="amr", GROUP="dialout", MODE="0660"

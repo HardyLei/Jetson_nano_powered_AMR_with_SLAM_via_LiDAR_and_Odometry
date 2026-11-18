@@ -1,63 +1,40 @@
 #!/usr/bin/env python3
+"""Calibrate the Yahboom accelerometer and gyroscope with the sensor flat."""
 
-import time
-from typing import Optional
+import argparse
 
+from serial import SerialException
 from YbImuLib import YbImuSerial
 
 
-# Serial port path / 串口设备路径
-SERIAL_PORT = "/dev/ttyUSB0"
-
-# Extra wait time after calibration in seconds / 校准后额外等待时间（秒）
-POST_CALIBRATION_WAIT = 2.0
-
-
-def create_serial_device() -> YbImuSerial:
-    """Create a serial IMU instance and start the receive thread.
-
-    创建串口 IMU 实例并启动接收线程。
-    """
-
-    imu = YbImuSerial(SERIAL_PORT, debug=False)
-    imu.create_receive_threading()
-    time.sleep(0.1)
-    return imu
-
-
-def format_state(state: Optional[int]) -> str:
-    """Convert calibration state to readable text.
-
-    将校准结果状态转换为可读文本。
-    """
-
-    if state == 1:
-        return "success"
-    if state == 0 or state is None:
-        return "incomplete"
-    return f"code {state}"
-
-
-def main() -> None:
-    imu = create_serial_device()
-
+def calibrate(magnetometer=False):
+    """Run exactly one calibration with exclusive access to the selected port."""
+    parser = argparse.ArgumentParser(description=(
+        'Optional magnetometer calibration' if magnetometer else __doc__
+    ))
+    parser.add_argument('port', nargs='?', default='/dev/myimu')
+    args = parser.parse_args()
     try:
-        version = imu.get_version()
-        print(f"Firmware version: {version}")
-    except Exception:
-        print("Firmware version: unavailable.")
+        imu = YbImuSerial(args.port, exclusive=True)
+        imu.create_receive_threading()
+        print(f'CONTAINER IMU firmware: {imu.get_version() or "unknown"}')
+        if magnetometer:
+            print('CONTAINER Rotate the IMU through many orientations. Timeout is about 90 s.')
+            imu.calibration_mag(timeout_ms=90_000)
+            expected = imu.FUNC_CALIB_MAG
+        else:
+            print('CONTAINER Keep the IMU flat and still during calibration.')
+            imu.calibration_imu()
+            expected = imu.FUNC_CALIB_IMU
+    except (OSError, SerialException) as exc:
+        print(f'CONTAINER Cannot use {args.port}: {exc}. Stop the IMU driver and check the port.')
+        return 1
 
-    print("Starting IMU calibration (keep the device stationary)...")
-    state = imu.calibration_imu()
-
-    if state is None and getattr(imu, "_rx_func", None) == getattr(imu, "FUNC_CALIB_IMU", None):
-        state = getattr(imu, "_rx_state", None)
-
-    print(f"IMU calibration result: {format_state(state)}")
-
-    time.sleep(POST_CALIBRATION_WAIT)
-    print("Calibration script finished.")
+    state = imu._rx_state if imu._rx_func == expected else None
+    result = 'success' if state == 1 else 'incomplete' if not state else f'code {state}'
+    print(f'CONTAINER Calibration result: {result}')
+    return 0 if state == 1 else 1
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    raise SystemExit(calibrate())
