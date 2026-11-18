@@ -1,0 +1,19 @@
+diff --git a/explore/src/explore.cpp b/explore/src/explore.cpp
+--- a/explore/src/explore.cpp
++++ b/explore/src/explore.cpp
+@@ -121,8 +121,14 @@ Explore::Explore()
+   exploring_timer_ = this->create_wall_timer(
+       std::chrono::milliseconds((uint16_t)(1000.0 / planner_frequency_)),
+       [this]() { makePlan(); });
+-  // Start exploration right away
+   auto status_msg = explore_lite_msgs::msg::ExploreStatus();
++  if (this->declare_parameter<bool>("start_paused", false)) {
++    exploring_timer_->cancel();
++    status_msg.status = explore_lite_msgs::msg::ExploreStatus::EXPLORATION_PAUSED;
++    status_pub_->publish(status_msg);
++    RCLCPP_INFO(logger_, "Exploration paused at startup. Publish true to explore/resume to begin.");
++    return;
++  }
+   status_msg.status = explore_lite_msgs::msg::ExploreStatus::EXPLORATION_STARTED;
+   status_pub_->publish(status_msg);
+   makePlan();

@@ -58,7 +58,7 @@ class YbImuDriver(Node):
         last_sample = self.robot.last_raw_data_time
         if last_sample is None or monotonic() - last_sample > self.max_sample_age:
             self.get_logger().warning(
-                f'No recent raw IMU frame on {self.port}; check the USB connection and module power',
+                f'No recent raw IMU frame on {self.port}. Check USB and module power.',
                 throttle_duration_sec=5.0,
             )
             return
