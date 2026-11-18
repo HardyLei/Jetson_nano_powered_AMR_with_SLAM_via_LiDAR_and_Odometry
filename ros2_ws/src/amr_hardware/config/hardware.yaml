@@ -1,4 +1,7 @@
 serial_interface_node:
   ros__parameters:
-    port: /dev/ttyUSB0
+    port: /dev/amr
     baudrate: 115200
+    # Full PWM speed estimate in rad/s. Verify with the wheels lifted.
+    max_wheel_speed_rad_s: 20.0
+    max_pwm: 255

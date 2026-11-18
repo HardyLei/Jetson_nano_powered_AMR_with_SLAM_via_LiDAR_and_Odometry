@@ -1,4 +1,4 @@
-SERIAL_PORT = '/dev/ttyUSB0'
-BAUDRATE = 115200
+"""Serial interface defaults for the Arduino Mega."""
 
-READ_TIMEOUT = 0.1  # seconds
+SERIAL_PORT = '/dev/amr'
+BAUDRATE = 115200

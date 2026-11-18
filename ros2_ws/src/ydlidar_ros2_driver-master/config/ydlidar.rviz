@@ -70,7 +70,7 @@ Visualization Manager:
         Depth: 5
         Durability Policy: System Default
         History Policy: System Default
-        Reliability Policy: System Default
+        Reliability Policy: Best Effort
         Value: /scan
       Use Fixed Frame: true
       Use rainbow: true
@@ -78,7 +78,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: laser
+    Fixed Frame: LiDAR_Link
     Frame Rate: 30
   Name: root
   Tools:

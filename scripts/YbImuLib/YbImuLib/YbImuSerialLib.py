@@ -11,13 +11,13 @@ import math
 # V1.0.0
 class YbImuSerial(object):
 
-    def __init__(self, port, debug=False):
+    def __init__(self, port, debug=False, exclusive=None):
         # port = "COM30"
         # port="/dev/ttyTHS1"
         # port="/dev/ttyUSB0"
         # port="/dev/ttyAMA0"
 
-        self._dev = serial.Serial(str(port), 115200)
+        self._dev = serial.Serial(str(port), 115200, exclusive=exclusive)
 
         self._debug = debug
 
@@ -47,6 +47,7 @@ class YbImuSerial(object):
         self._RX_MAX_LEN = 40
 
         
+        self.last_raw_data_time = None
         self._ax = 0.0
         self._ay = 0.0
         self._az = 0.0
@@ -112,6 +113,8 @@ class YbImuSerial(object):
         # 解析原始陀螺仪、加速度计、磁力计数据
         # the original gyroscope, accelerometer, magnetometer data
         if ext_type == self.FUNC_REPORT_IMU_RAW:
+            if len(ext_data) < 12:
+                return
             # 转化单位为g
             accel_ratio = 16 / 32767.0
             self._ax = struct.unpack('h', bytearray(ext_data[0:2]))[0]*accel_ratio
@@ -127,9 +130,11 @@ class YbImuSerial(object):
 
             # 转化单位为uT
             mag_ratio = 800.0 / 32767.0
-            self._mx = struct.unpack('h', bytearray(ext_data[12:14]))[0]*mag_ratio
-            self._my = struct.unpack('h', bytearray(ext_data[14:16]))[0]*mag_ratio
-            self._mz = struct.unpack('h', bytearray(ext_data[16:18]))[0]*mag_ratio
+            if len(ext_data) >= 18:
+                self._mx = struct.unpack('h', bytearray(ext_data[12:14]))[0]*mag_ratio
+                self._my = struct.unpack('h', bytearray(ext_data[14:16]))[0]*mag_ratio
+                self._mz = struct.unpack('h', bytearray(ext_data[16:18]))[0]*mag_ratio
+            self.last_raw_data_time = time.monotonic()
         # 解析板子的姿态角
         # the attitude Angle of the board
         elif ext_type == self.FUNC_REPORT_IMU_EULER:
@@ -323,7 +328,7 @@ class YbImuSerial(object):
 
 
     # 校准磁力计
-    def calibration_mag(self):
+    def calibration_mag(self, timeout_ms=None):
         self._rx_func = 0
         self._rx_state = 0
         cmd = [self._HEAD1, self._HEAD2, 0x00, self.FUNC_CALIB_MAG, 0x01, 0x5F]
@@ -332,7 +337,7 @@ class YbImuSerial(object):
         cmd.append(checksum)
         self._send_data(cmd)
         self._print_log(cmd, "cali mag")
-        self.wait_calibration(self.FUNC_CALIB_MAG, "cali mag")
+        self.wait_calibration(self.FUNC_CALIB_MAG, "cali mag", timeout_ms)
 
 
     # 校准温度
