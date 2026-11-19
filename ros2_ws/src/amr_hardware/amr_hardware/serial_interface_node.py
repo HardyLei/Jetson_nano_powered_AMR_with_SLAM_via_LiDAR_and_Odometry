@@ -28,6 +28,17 @@ class SerialInterfaceNode(Node):
             raise ValueError('max_wheel_speed_rad_s must be finite and positive')
         if not 1 <= self.max_pwm <= 255:
             raise ValueError('max_pwm must be between 1 and 255')
+        self.min_forward_pwm = self.declare_parameter('min_forward_pwm', [0] * 4).value
+        self.min_reverse_pwm = self.declare_parameter('min_reverse_pwm', [0] * 4).value
+        self.stop_speed = self.declare_parameter('wheel_stop_rad_s', 0.0).value
+        for name, values in (
+            ('min_forward_pwm', self.min_forward_pwm),
+            ('min_reverse_pwm', self.min_reverse_pwm),
+        ):
+            if len(values) != 4 or any(not 0 <= value <= self.max_pwm for value in values):
+                raise ValueError(f'{name} must contain four values between 0 and max_pwm')
+        if not isfinite(self.stop_speed) or not 0.0 <= self.stop_speed < self.full_scale_speed:
+            raise ValueError('wheel_stop_rad_s must be nonnegative and below full-scale speed')
 
         try:
             self.serial_driver = SerialDriver(self.port, baudrate)
@@ -59,8 +70,15 @@ class SerialInterfaceNode(Node):
         speeds = (msg.front_left, msg.front_right, msg.rear_left, msg.rear_right)
         if not all(map(isfinite, speeds)):
             speeds = (0.0,) * 4
-        pwms = [wheel_speed_to_pwm(speed, self.full_scale_speed, self.max_pwm)
-                for speed in speeds]
+        pwms = [
+            wheel_speed_to_pwm(
+                speed, self.full_scale_speed, self.max_pwm,
+                forward_min if speed > 0 else reverse_min, self.stop_speed,
+            )
+            for speed, forward_min, reverse_min in zip(
+                speeds, self.min_forward_pwm, self.min_reverse_pwm,
+            )
+        ]
         self.serial_driver.write(build_wheel_command(*pwms))
         self.sent_command = True
 

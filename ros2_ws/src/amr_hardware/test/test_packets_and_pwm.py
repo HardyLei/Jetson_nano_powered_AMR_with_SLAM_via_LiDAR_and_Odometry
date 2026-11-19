@@ -30,3 +30,12 @@ def test_reject_invalid_packets(packet):
 def test_pwm_clamp(rad_s, expected):
     """Convert signed velocity and respect the firmware limits."""
     assert wheel_speed_to_pwm(rad_s, 20.0, 255) == expected
+
+
+@pytest.mark.parametrize('rad_s, expected', [
+    (0.0, 0), (0.05, 0), (-0.1, 0), (0.2, 76), (-1.25, -76),
+    (10.0, 128), (-80.0, -255), (float('inf'), 0),
+])
+def test_pwm_floor_preserves_stop_and_limits(rad_s, expected):
+    """Apply the floor only to intended motion and preserve the signed PWM limit."""
+    assert wheel_speed_to_pwm(rad_s, 20.0, 255, min_pwm=76, stop_speed=0.1) == expected
