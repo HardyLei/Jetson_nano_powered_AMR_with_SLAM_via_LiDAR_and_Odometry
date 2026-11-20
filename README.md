@@ -213,26 +213,18 @@ Do not run SLAM Toolbox mapping and AMCL at the same time. Both provide
 
 ## Frame Naming
 
-The current repository has several different frame names that must be
-reconciled before launch:
+The repository uses these consistent physical sensor frames:
 
 | Component | Current frame |
 |---|---|
 | URDF LiDAR link | `LiDAR_Link` |
 | URDF IMU link | `IMU_Link` |
-| YDLIDAR parameters | `laser` |
-| YBIMU driver | `imu_link` |
+| YDLIDAR parameters and scan messages | `LiDAR_Link` |
+| YBIMU and filtered IMU messages | `IMU_Link` |
 | Encoder odometry | `odom -> base_link` |
 
-Use one consistent pair in each setup:
-
-- YDLIDAR: `frame_id: LiDAR_Link`
-- YBIMU: `frame_id: IMU_Link`
-- Robot description: maintain `LiDAR_Link` and `IMU_Link`
-
-Alternatively, standardize the URDF to lowercase `laser` and `imu_link`, and
-update the YDLIDAR and YBIMU publishers accordingly. Do not leave the physical
-frame names inconsistent.
+Do not add a YDLIDAR static-transform publisher: `robot_state_publisher`
+already publishes the URDF transform from `base_link` to `LiDAR_Link`.
 
 The URDF places the LiDAR relative to `base_link` at approximately:
 
@@ -242,10 +234,8 @@ y = 0.00013794 m
 z = 0.192 m
 ```
 
-Do not add a YDLIDAR static-transform publisher for `base_link -> laser` if
-`robot_state_publisher` is already publishing the URDF transform
-`base_link -> LiDAR_Link`. An extra transform with a different parent-child
-name or pose will create TF conflicts.
+An extra transform with a different parent-child name or pose will create TF
+conflicts.
 
 ## Recommended Bringup Sequence
 
@@ -289,6 +279,10 @@ from RViz. For navigation using an existing saved map, run:
 
 - [`ydlidar_ros2_driver-master`](ros2_ws/src/ydlidar_ros2_driver-master)
   YDLIDAR ROS 2 driver, configuration, launch files, and RViz integration.
+
+- [`amr_bringup`](ros2_ws/src/amr_bringup)
+  Configurable launch file for starting the robot description, control,
+  odometry, hardware, IMU, LiDAR, and optional Robot Localization EKF.
 
 - [`YDLidar-SDK`](ros2_ws/src/YDLidar-SDK)
   YDLIDAR device SDK included as a Git submodule.
@@ -352,6 +346,26 @@ Launch the YDLIDAR driver or its RViz visualization configuration:
 ```bash
 ros2 launch ydlidar_ros2_driver ydlidar_launch.py
 ros2 launch ydlidar_ros2_driver view_ydlidar_launch.py
+```
+
+Launch the complete AMR hardware stack:
+
+```bash
+ros2 launch amr_bringup bringup.launch.py
+```
+
+Launch with Robot Localization enabled. The encoder node must not also publish
+`odom -> base_link`, because the EKF is the sole publisher:
+
+```bash
+ros2 launch amr_bringup bringup.launch.py \
+  use_localization:=true publish_odom_tf:=false
+```
+
+Individual components can be disabled with launch arguments, for example:
+
+```bash
+ros2 launch amr_bringup bringup.launch.py use_lidar:=false use_imu:=false
 ```
 
 ## Hardware Defaults

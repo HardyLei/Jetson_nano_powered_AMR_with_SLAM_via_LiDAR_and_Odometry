@@ -30,6 +30,7 @@ class OdometryNode(Node):
         self.declare_parameter('odometry_topic', '/odom')
         self.declare_parameter('odom_frame', 'odom')
         self.declare_parameter('base_frame', 'base_link')
+        self.declare_parameter('publish_tf', True)
 
         self.wheel_radius = self.get_parameter('wheel_radius').value
         self.L = self.get_parameter('wheel_base_x').value
@@ -39,6 +40,7 @@ class OdometryNode(Node):
         self.odometry_topic = self.get_parameter('odometry_topic').value
         self.odom_frame = self.get_parameter('odom_frame').value
         self.base_frame = self.get_parameter('base_frame').value
+        self.publish_odom_tf = self.get_parameter('publish_tf').value
 
         if self.wheel_radius <= 0 or self.L + self.W <= 0:
             raise ValueError('wheel_radius and wheel_base_x + wheel_base_y must be positive')
@@ -146,7 +148,8 @@ class OdometryNode(Node):
                 odom_msg.twist.twist.linear.y = vy
                 odom_msg.twist.twist.angular.z = wz 
                 self.odom_pub.publish(odom_msg)
-                self.publish_tf(current_time, q)
+                if self.publish_odom_tf:
+                    self.publish_tf(current_time, q)
 
     def publish_tf(self, current_time, q):
         t = TransformStamped()

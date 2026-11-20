@@ -8,3 +8,4 @@ odometry_node:
     odometry_topic: /odom
     odom_frame: odom
     base_frame: base_link
+    publish_tf: true

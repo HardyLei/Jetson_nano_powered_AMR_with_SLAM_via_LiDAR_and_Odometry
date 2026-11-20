@@ -70,7 +70,7 @@ class ybimu_driver(Node):
         # 发布陀螺仪的数据
         # Publish gyroscope data
         imu.header.stamp = time_stamp.to_msg()
-        imu.header.frame_id = "imu_link"
+        imu.header.frame_id = "IMU_Link"
         imu.linear_acceleration.x = ax * 1.0
         imu.linear_acceleration.y = ay * 1.0
         imu.linear_acceleration.z = az * 1.0
@@ -83,7 +83,7 @@ class ybimu_driver(Node):
         imu.orientation.z = q3
 
         mag.header.stamp = time_stamp.to_msg()
-        mag.header.frame_id = "imu_link"
+        mag.header.frame_id = "IMU_Link"
         mag.magnetic_field.x = mx * 1.0
         mag.magnetic_field.y = -my * 1.0
         mag.magnetic_field.z = mz * 1.0
