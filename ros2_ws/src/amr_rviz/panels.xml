@@ -1,0 +1,5 @@
+<library path="amr_rviz_panel">
+  <class name="amr_rviz/Exploration" type="amr_rviz::ExplorationPanel" base_class_type="rviz_common::Panel">
+    <description>Switch between autonomous exploration and RViz destination goals.</description>
+  </class>
+</library>

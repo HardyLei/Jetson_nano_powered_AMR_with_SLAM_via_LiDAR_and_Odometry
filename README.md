@@ -1,6 +1,6 @@
 # Jetson Nano AMR with LiDAR SLAM and Nav2
 
-## Run automatic mapping in two terminals
+## Run automatic mapping
 
 Run these commands from the repository root on the Jetson after completing the
 [first-time setup](#first-time-setup). Use a clear, bounded area, reliable
@@ -16,8 +16,16 @@ with `ls -l /dev/serial/by-path/` and change the arguments if needed.
 ```
 
 Wait for the map to appear and for Nav2 to report that its managed nodes are
-active. Leave this terminal running. The explorer starts paused. You can omit
-`rviz:=true` when running from SSH without a display.
+active. Leave this terminal running. The explorer starts paused.
+
+In RViz's **Exploration** panel, click **Explore** to start autonomous mapping.
+To drive to a destination you choose, click **RViz Goals**. Wait for the panel
+to show **Explorer paused**, then use **Nav2 Goal** to pick a clear point.
+Click **Explore** again to return to autonomous mapping. SLAM Toolbox keeps
+updating the same map as you switch modes.
+
+When running over SSH without a display, omit `rviz:=true` and use the second
+terminal below to control exploration.
 
 **Terminal 2 (Jetson host, then container)** — Open the ROS shell, then send
 the start signal at the container prompt when the area is clear.

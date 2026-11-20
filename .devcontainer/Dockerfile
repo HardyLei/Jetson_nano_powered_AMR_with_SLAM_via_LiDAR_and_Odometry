@@ -1,7 +1,7 @@
 FROM ros:humble
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    build-essential cmake git nano passwd procps psmisc \
+    build-essential cmake git nano passwd procps psmisc qtbase5-dev \
     python3-colcon-common-extensions python3-pip python3-pytest python3-yaml \
     ros-humble-ament-lint-common ros-humble-ament-mypy \
     ros-humble-imu-filter-madgwick ros-humble-rviz-imu-plugin ros-humble-rviz2 \

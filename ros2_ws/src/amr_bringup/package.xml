@@ -12,6 +12,7 @@
   <exec_depend>amr_control</exec_depend>
   <exec_depend>amr_description</exec_depend>
   <exec_depend>amr_hardware</exec_depend>
+  <exec_depend>amr_rviz</exec_depend>
   <exec_depend>imu_ros2_device</exec_depend>
   <exec_depend>joint_state_publisher</exec_depend>
   <exec_depend>robot_localization</exec_depend>

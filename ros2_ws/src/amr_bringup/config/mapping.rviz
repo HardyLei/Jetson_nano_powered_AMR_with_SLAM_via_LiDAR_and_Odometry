@@ -55,3 +55,5 @@ Panels:
     Name: Displays
   - Class: nav2_rviz_plugins/Navigation 2
     Name: Navigation 2
+  - Class: amr_rviz/Exploration
+    Name: Exploration
