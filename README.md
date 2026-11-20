@@ -362,6 +362,50 @@ ros2 launch amr_bringup bringup.launch.py \
   use_localization:=true publish_odom_tf:=false
 ```
 
+## PC-side Mapping and Navigation Launches
+
+The Jetson runs the hardware bringup and EKF. Run these launch files from the
+PC without starting hardware nodes:
+
+### Mapping mode
+
+```bash
+source /opt/ros/humble/setup.bash
+export ROS_DOMAIN_ID=0
+
+ros2 launch amr_bringup mapping.launch.py
+```
+
+This starts SLAM Toolbox, RViz2, and keyboard teleoperation. Disable optional
+PC components with:
+
+```bash
+ros2 launch amr_bringup mapping.launch.py \
+  use_rviz:=false use_teleop:=false
+```
+
+Save the completed map by running this on the PC:
+
+```bash
+mkdir -p ~/amr_maps
+ros2 run nav2_map_server map_saver_cli -f ~/amr_maps/amr
+```
+
+### Navigation mode
+
+After creating `~/amr_maps/amr.yaml` and `~/amr_maps/amr.pgm`, launch Nav2:
+
+```bash
+source /opt/ros/humble/setup.bash
+export ROS_DOMAIN_ID=0
+
+ros2 launch amr_bringup navigation.launch.py \
+  map:=/home/$USER/amr_maps/amr.yaml
+```
+
+Navigation mode starts AMCL, the static map server, Nav2, and RViz. Use
+**2D Pose Estimate** in RViz before sending a **Nav2 Goal**.
+
 Individual components can be disabled with launch arguments, for example:
 
 ```bash
