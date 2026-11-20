@@ -11,18 +11,19 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     ros-humble-robot-localization \
     && rm -rf /var/lib/apt/lists/*
 
-COPY .devcontainer/explore-start-paused.patch /tmp/explore-start-paused.patch
+COPY .devcontainer/explore-start-paused.patch .devcontainer/explore-continue-mapping.patch /tmp/
 ARG AMR_EXPLORE_REV=326cf8a0b487c34246bb8f3326afbcd69576dc60
 RUN git init /tmp/amr-explore/src/m-explore-ros2 \
     && git -C /tmp/amr-explore/src/m-explore-ros2 fetch --depth=1 \
         https://github.com/robo-friends/m-explore-ros2.git "$AMR_EXPLORE_REV" \
     && git -C /tmp/amr-explore/src/m-explore-ros2 checkout --detach FETCH_HEAD \
     && git -C /tmp/amr-explore/src/m-explore-ros2 apply /tmp/explore-start-paused.patch \
+    && git -C /tmp/amr-explore/src/m-explore-ros2 apply /tmp/explore-continue-mapping.patch \
     && bash -c 'source /opt/ros/humble/setup.bash && cd /tmp/amr-explore \
         && MAKEFLAGS=-j2 colcon build --executor sequential --merge-install \
             --install-base /opt/amr-explore --packages-up-to explore_lite \
             --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF' \
-    && rm -rf /tmp/amr-explore /tmp/explore-start-paused.patch
+    && rm -rf /tmp/amr-explore /tmp/explore-start-paused.patch /tmp/explore-continue-mapping.patch
 
 COPY ros2_ws/src /tmp/ros-src
 ARG YDLIDAR_UPSTREAM_REV=e008f32ed7477c6351b49e2215f8fc5a797b8959

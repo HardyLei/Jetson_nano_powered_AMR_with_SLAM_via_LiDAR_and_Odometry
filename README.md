@@ -34,10 +34,13 @@ exploration, run this in Terminal 2:
 ros2 topic pub --once /explore/resume std_msgs/msg/Bool '{data: false}'
 ```
 
-To resume, send `{data: true}` again. If the explorer reports
-`All frontiers traversed/tried out, stopping`, it has run out of candidate
-goals to try on the current map. Inspect **Scan** and `/global_costmap/costmap` in
-RViz before resuming. If the publish command waits for a matching
+To resume, send `{data: true}` again. If no eligible frontiers remain, the
+explorer lets the active Nav2 goal finish, then selects a nearby clear viewpoint
+in the mapped area. It switches back to frontier goals as soon as one becomes
+eligible. If the costmap has no reachable viewpoint, the robot waits while the
+explorer keeps checking. Use the pause command when you're done surveying.
+
+If the publish command waits for a matching
 subscription, press **Ctrl+C** and check Terminal 1 for explorer startup
 errors and confirm that you launched with `explore:=true`.
 
