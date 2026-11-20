@@ -47,10 +47,8 @@ def make_stack(context, share, nav2):
         GroupAction(
             condition=IfCondition(LaunchConfiguration('start_robot')),
             actions=[
-                include(launch_dir / 'sensors.launch.py',
-                        **{key: LaunchConfiguration(key) for key in sensors}),
-                include(launch_dir / 'base.launch.py',
-                        **{key: LaunchConfiguration(key) for key in base}),
+                include(launch_dir / 'robot.launch.py', explore='false',
+                        **{key: LaunchConfiguration(key) for key in sensors + base}),
             ],
         ),
     ]
@@ -78,10 +76,7 @@ def make_stack(context, share, nav2):
         ),
     ])
     if explore:
-        actions.append(Node(
-            package='explore_lite', executable='explore', name='explore',
-            output='screen', parameters=[str(share / 'config' / 'explore.yaml')],
-        ))
+        actions.append(include(launch_dir / 'explorer.launch.py'))
     return actions
 
 

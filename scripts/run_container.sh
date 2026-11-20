@@ -33,17 +33,21 @@ if docker container inspect "$AMR_CONTAINER" >/dev/null 2>&1; then
     fi
 fi
 
-args=()
-if dialout=$(getent group dialout | cut -d: -f3) && [[ -n $dialout ]]; then
-    args+=(--group-add "$dialout")
+args=(--network host)
+if [[ ${AMR_PROFILE:-} != vm ]]; then
+    args+=(--privileged --volume /dev:/dev)
+    if dialout=$(getent group dialout | cut -d: -f3) && [[ -n $dialout ]]; then
+        args+=(--group-add "$dialout")
+    fi
 fi
 if [[ -d /tmp/.X11-unix ]]; then
     args+=(--volume /tmp/.X11-unix:/tmp/.X11-unix:ro)
 fi
-echo 'HOST Starting the AMR container as your user. Live /dev access lets device names follow USB replugging.'
-docker run -d --init --name "$AMR_CONTAINER" --network host --privileged \
+echo "HOST Starting $AMR_CONTAINER as your user."
+docker run -d --init --name "$AMR_CONTAINER" \
     --label "amr.workspace=$AMR_ROOT" --user "$(id -u):$(id -g)" \
     --env HOME=/tmp/amr-home --env QT_X11_NO_MITSHM=1 \
-    --volume /dev:/dev --volume "$AMR_ROOT/ros2_ws:/workspace" \
+    --env "ROS_DOMAIN_ID=$AMR_ROS_DOMAIN_ID" --env ROS_LOCALHOST_ONLY=0 \
+    --volume "$AMR_ROOT/ros2_ws:/workspace" \
     --volume "$AMR_ROOT/scripts:/amr-scripts:ro" \
     "${args[@]}" "$AMR_IMAGE" bash -ec 'mkdir -p "$HOME"; exec sleep infinity' >/dev/null
