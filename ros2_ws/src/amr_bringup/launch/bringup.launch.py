@@ -55,12 +55,12 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'use_localization',
-            default_value='false',
+            default_value='true',
             description='Start the Robot Localization EKF.',
         ),
         DeclareLaunchArgument(
             'publish_odom_tf',
-            default_value='true',
+            default_value='false',
             description='Publish odom -> base_link from encoder odometry. '
                         'Set false when Robot Localization is enabled.',
         ),
