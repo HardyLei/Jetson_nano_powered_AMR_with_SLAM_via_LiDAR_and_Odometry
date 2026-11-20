@@ -370,11 +370,13 @@ ros2 launch amr_bringup bringup.launch.py use_lidar:=false use_imu:=false
 
 ## Hardware Defaults
 
-The AMR hardware interface uses the following default serial configuration:
+The AMR uses the following fixed serial device assignments:
 
 ```text
-Port:     /dev/ttyUSB0
-Baudrate: 115200
+LiDAR:    /dev/ttyUSB0
+IMU:      /dev/ttyUSB1
+Arduino:  /dev/ttyUSB2
+Baudrate: 115200 (Arduino and LiDAR)
 ```
 
 The YDLIDAR configuration is stored in

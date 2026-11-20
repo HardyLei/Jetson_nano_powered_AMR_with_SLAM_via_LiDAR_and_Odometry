@@ -1,4 +1,4 @@
-SERIAL_PORT = '/dev/ttyUSB0'
+SERIAL_PORT = '/dev/ttyUSB2'
 BAUDRATE = 115200
 
 READ_TIMEOUT = 0.1  # seconds
