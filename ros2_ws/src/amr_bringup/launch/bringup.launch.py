@@ -7,7 +7,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 
-from launch_ros.actions import LifecycleNode, Node
+from launch_ros.actions import Node
 
 
 def generate_launch_description():
@@ -51,7 +51,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'use_lidar',
             default_value='true',
-            description='Start the YDLIDAR X3 lifecycle driver.',
+            description='Start the YDLIDAR X3 driver.',
         ),
         DeclareLaunchArgument(
             'use_localization',
@@ -116,7 +116,7 @@ def generate_launch_description():
             condition=IfCondition(LaunchConfiguration('use_imu')),
             output='screen',
         ),
-        LifecycleNode(
+        Node(
             package='ydlidar_ros2_driver',
             executable='ydlidar_ros2_driver_node',
             name='ydlidar_ros2_driver_node',

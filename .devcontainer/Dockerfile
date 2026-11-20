@@ -12,6 +12,7 @@ RUN apt update && apt install -y \
     ros-humble-navigation2 \
     ros-humble-nav2-bringup \
     ros-humble-robot-localization \
+    ros-humble-imu-filter-madgwick \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ros2_ws/src/YDLidar-SDK /tmp/YDLidar-SDK
