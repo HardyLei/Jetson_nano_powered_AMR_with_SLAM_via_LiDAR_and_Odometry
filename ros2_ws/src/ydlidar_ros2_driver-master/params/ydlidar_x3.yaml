@@ -9,8 +9,8 @@ ydlidar_ros2_driver_node:
     sample_rate: 3
     abnormal_check_count: 4
     fixed_resolution: true
-    # Verify scan orientation against the physical mounting.
-    reversion: false
+    # Rotate scan bearings by 180 degrees to match LiDAR_Link's forward axis.
+    reversion: true
     inverted: true
     auto_reconnect: true
     isSingleChannel: true
