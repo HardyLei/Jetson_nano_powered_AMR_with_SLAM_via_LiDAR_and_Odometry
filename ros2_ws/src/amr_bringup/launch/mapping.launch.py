@@ -13,13 +13,6 @@ def generate_launch_description():
     bringup_share = Path(
         get_package_share_directory('amr_bringup')
     )
-    nav2_share = Path(
-        get_package_share_directory('nav2_bringup')
-    )
-    slam_share = Path(
-        get_package_share_directory('slam_toolbox')
-    )
-
     use_rviz = LaunchConfiguration('use_rviz')
     use_teleop = LaunchConfiguration('use_teleop')
 
@@ -27,9 +20,9 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'slam_params_file',
             default_value=str(
-                bringup_share / 'config' / 'slam_toolbox.yaml'
+                bringup_share / 'config' / 'gmapping.yaml'
             ),
-            description='Full path to the SLAM Toolbox parameter file.',
+            description='Full path to the GMapping parameter file.',
         ),
         DeclareLaunchArgument(
             'use_rviz',
@@ -43,35 +36,19 @@ def generate_launch_description():
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                str(
-                    slam_share
-                    / 'launch'
-                    / 'online_async_launch.py'
-                )
+                str(bringup_share / 'launch' / 'gmapping.launch.py')
             ),
             launch_arguments={
-                'autostart': 'true',
-                'use_sim_time': 'false',
-                'slam_params_file':
-                    LaunchConfiguration('slam_params_file'),
+                'slam_params_file': LaunchConfiguration('slam_params_file'),
             }.items(),
         ),
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                str(
-                    nav2_share
-                    / 'launch'
-                    / 'rviz_launch.py'
-                )
-            ),
-            launch_arguments={
-                'namespace': '',
-                'use_sim_time': 'false',
-                'rviz_config': str(
-                    nav2_share / 'rviz' / 'nav2_default_view.rviz'
-                ),
-            }.items(),
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            arguments=['-d', str(bringup_share / 'config' / 'mapping.rviz')],
             condition=IfCondition(use_rviz),
+            output='screen',
         ),
         Node(
             package='teleop_twist_keyboard',

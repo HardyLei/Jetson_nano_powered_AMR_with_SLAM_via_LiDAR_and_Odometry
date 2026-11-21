@@ -1,122 +1,136 @@
-#!/usr/bin/env python
-# encoding: utf-8
+"""Publish serial Yahboom IMU measurements."""
 
-# public lib
-import sys
-import math
-import random
-import threading
+from math import isfinite
+from time import monotonic
 
+from rcl_interfaces.msg import ParameterDescriptor
+import rclpy
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from sensor_msgs.msg import Imu, MagneticField
+from serial import SerialException
+from std_msgs.msg import Float32MultiArray
 from YbImuLib import YbImuSerial
 
-# ros lib
-import rclpy
-from rclpy.node import Node
-from rclpy.clock import Clock
-from sensor_msgs.msg import Imu, MagneticField
-from std_msgs.msg import Float32MultiArray
 
+class YbImuDriver(Node):
+    """Read the latest measurements cached by the Yahboom library."""
 
-class ybimu_driver(Node):
-    def __init__(self, name):
-        super().__init__(name)
-        self.robot = None
+    def __init__(self):
+        super().__init__('ybimu_node')
+        port = self.declare_parameter('port', '/dev/myimu').value
+        rate = self.declare_parameter('rate_hz', 50.0).value
+        self.frame_id = self.declare_parameter('frame_id', 'IMU_Link').value
+        self.rotate_yaw_180 = self.declare_parameter('rotate_yaw_180', False).value
+        # YbImuLib returns acceleration in g and gyro in rad/s.
+        self.accel_scale = self.declare_parameter('accel_scale', 9.80665).value
+        self.max_sample_age = self.declare_parameter('max_sample_age_sec', 0.5).value
+        self.gyro_scale = self.declare_parameter('gyro_scale', 1.0).value
+        if not isfinite(rate) or rate <= 0.0:
+            raise ValueError('rate_hz must be finite and positive')
+        self.covariances = {}
+        for field, default in (
+            ('orientation', 0.04), ('angular_velocity', 0.0025),
+            ('linear_acceleration', 0.04),
+        ):
+            value = self.declare_parameter(f'{field}_variance', default).value
+            self.covariances[field] = [value, 0., 0., 0., value, 0., 0., 0., value]
 
-
-    def init_topic(self):
-        port_list = ["/dev/ttyUSB1"]
-        for port in port_list:
-            try:
-                self.robot = YbImuSerial(port)
-                self.get_logger().info("Open Ybimu Port OK:%s" % port)
-                break
-            except:
-                pass
-        if self.robot is None:
-            self.get_logger().error("---------Fail To Open Ybimu Serial------------")
-            return
+        if not isfinite(self.max_sample_age) or self.max_sample_age <= 0.0:
+            raise ValueError('max_sample_age_sec must be finite and positive')
+        self.port = port
+        try:
+            self.robot = YbImuSerial(port, exclusive=True)
+        except (OSError, SerialException) as exc:
+            self.get_logger().error(f'Cannot open IMU on {port}: {exc}')
+            raise
         self.robot.create_receive_threading()
+        version = self.robot.get_version() or 'unknown'
+        self.declare_parameter('firmware_version', version, ParameterDescriptor(read_only=True))
+        self.get_logger().info(f'IMU opened on {port}. Firmware: {version}')
+        self.imu_pub = self.create_publisher(Imu, '/imu/data_raw', 10)
+        self.mag_pub = self.create_publisher(MagneticField, '/imu/mag', 10)
+        self.baro_pub = self.create_publisher(Float32MultiArray, '/baro', 10)
+        self.euler_pub = self.create_publisher(Float32MultiArray, '/euler', 10)
+        self.timer = self.create_timer(1.0 / rate, self.publish_data)
 
-        # create publisher
-        self.imuPublisher = self.create_publisher(Imu, "imu/data_raw", 100)
-        self.magPublisher = self.create_publisher(MagneticField, "imu/mag", 100)
-        self.baroPublisher = self.create_publisher(Float32MultiArray, "baro", 100)
-        self.eulerPublisher = self.create_publisher(Float32MultiArray, "euler", 100)
-
-        # create timer
-        self.timer = self.create_timer(0.1, self.pub_data)
-
-
-    # pub data
-    def pub_data(self):
-        if self.robot is None:
+    def publish_data(self):
+        """Publish the core data even when an optional sensor fails."""
+        last_sample = self.robot.last_raw_data_time
+        if last_sample is None or monotonic() - last_sample > self.max_sample_age:
+            self.get_logger().warning(
+                f'No recent raw IMU frame on {self.port}. Check USB and module power.',
+                throttle_duration_sec=5.0,
+            )
             return
-        time_stamp = Clock().now()
+
         imu = Imu()
-        mag = MagneticField()
-        baro = Float32MultiArray()
-        euler = Float32MultiArray()
+        imu.header.stamp = self.get_clock().now().to_msg()
+        imu.header.frame_id = self.frame_id
+        ax, ay, az = self.robot.get_accelerometer_data()
+        gx, gy, gz = self.robot.get_gyroscope_data()
+        qw, qx, qy, qz = self.robot.get_imu_quaternion_data()
+        if self.rotate_yaw_180:
+            ax, ay = -ax, -ay
+            gx, gy = -gx, -gy
+            # Postmultiply the orientation by the 180-degree body-frame rotation.
+            qw, qx, qy, qz = -qz, qy, -qx, qw
+        imu.linear_acceleration.x = ax * self.accel_scale
+        imu.linear_acceleration.y = ay * self.accel_scale
+        imu.linear_acceleration.z = az * self.accel_scale
+        imu.angular_velocity.x = gx * self.gyro_scale
+        imu.angular_velocity.y = gy * self.gyro_scale
+        imu.angular_velocity.z = gz * self.gyro_scale
+        imu.orientation.w = qw
+        imu.orientation.x = qx
+        imu.orientation.y = qy
+        imu.orientation.z = qz
+        for field, covariance in self.covariances.items():
+            setattr(imu, f'{field}_covariance', covariance)
+        if not any((qw, qx, qy, qz)):
+            # A zero quaternion means the module has yet to report orientation.
+            imu.orientation_covariance[0] = -1.0
+        self.imu_pub.publish(imu)
 
-        [ax, ay, az] = self.robot.get_accelerometer_data()
-        # self.get_logger().info("ax = {}, ay = {}, az = {} ".format(ax,ay,az))
-        [gx, gy, gz] = self.robot.get_gyroscope_data()
-        # self.get_logger().info("gx = {}, gy = {}, gz = {} ".format(gx,gy,gz))
-        [mx, my, mz] = self.robot.get_magnetometer_data()
-        # self.get_logger().info("mx = {}, my = {}, mz = {} ".format(mx,my,mz))
-        [q0, q1, q2, q3] = self.robot.get_imu_quaternion_data()
-        [height, temperature, pressure, pressure_contrast] = self.robot.get_baro_data()
-        [roll, pitch, yaw] = self.robot.get_imu_attitude_data(True)
+        try:
+            mx, my, mz = self.robot.get_magnetometer_data()
+            if self.rotate_yaw_180:
+                mx, my = -mx, -my
+            mag = MagneticField()
+            mag.header = imu.header
+            mag.magnetic_field.x = mx
+            mag.magnetic_field.y = -my
+            mag.magnetic_field.z = mz
+            self.mag_pub.publish(mag)
+        except Exception as exc:
+            self.get_logger().warning(f'Magnetometer unavailable: {exc}', once=True)
 
-        # 发布陀螺仪的数据
-        # Publish gyroscope data
-        imu.header.stamp = time_stamp.to_msg()
-        imu.header.frame_id = "IMU_Link"
-        imu.linear_acceleration.x = ax * 1.0
-        imu.linear_acceleration.y = ay * 1.0
-        imu.linear_acceleration.z = az * 1.0
-        imu.angular_velocity.x = gx * 1.0
-        imu.angular_velocity.y = gy * 1.0
-        imu.angular_velocity.z = gz * 1.0
-        imu.orientation.w = q0
-        imu.orientation.x = q1
-        imu.orientation.y = q2
-        imu.orientation.z = q3
+        try:
+            self.baro_pub.publish(Float32MultiArray(data=self.robot.get_baro_data()))
+        except Exception as exc:
+            self.get_logger().warning(f'Barometer unavailable: {exc}', once=True)
 
-        mag.header.stamp = time_stamp.to_msg()
-        mag.header.frame_id = "IMU_Link"
-        mag.magnetic_field.x = mx * 1.0
-        mag.magnetic_field.y = -my * 1.0
-        mag.magnetic_field.z = mz * 1.0
-
-        baro.data = [height, temperature, pressure, pressure_contrast]
-        euler.data = [roll, pitch, yaw]
-
-        self.imuPublisher.publish(imu)
-        self.magPublisher.publish(mag)
-        self.baroPublisher.publish(baro)
-        self.eulerPublisher.publish(euler)
-
-    def ready(self):
-        if self.robot is None:
-            return False
-        else:
-            return True
-
+        roll, pitch, yaw = self.robot.get_imu_attitude_data(True)
+        if self.rotate_yaw_180:
+            roll, pitch, yaw = -roll, -pitch, yaw % 360.0 - 180.0
+        self.euler_pub.publish(Float32MultiArray(data=[roll, pitch, yaw]))
 
 
 def main(args=None):
+    """Start the serial IMU node."""
     rclpy.init(args=args)
-    node = ybimu_driver("ybimu_node")
-    node.init_topic()
-    if not node.ready():
-        return
+    node = None
     try:
+        node = YbImuDriver()
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
-        node.destroy_node()
+        if node is not None:
+            node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

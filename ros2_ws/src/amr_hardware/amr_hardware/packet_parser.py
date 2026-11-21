@@ -1,23 +1,12 @@
-"""
-this function parses the encoder packet from the robot
-assume the encoder packet goes: ENC, fr, fl, rr, rl
-"""
+"""Decode cumulative encoder measurements from the Arduino."""
+
+
 def parse_encoder_packet(packet):
-    """
-    Parse an encoder packet.
-
-    Args:
-        packet (str): The encoder packet to parse.
-
-    Returns:
-        dict: A dictionary containing the parsed encoder values.
-    """
+    """Return int32 encoder counts from an ENC,fl,fr,rl,rr line."""
     parts = packet.split(',')
-    if parts[0] != 'ENC' or len(parts) != 5:
-        raise ValueError("Invalid encoder packet format")
-    return {
-        "front_left": int(parts[1]),
-        "front_right": int(parts[2]),
-        "rear_left": int(parts[3]),
-        "rear_right": int(parts[4])
-    }
+    if len(parts) != 5 or parts[0] != 'ENC':
+        raise ValueError('Invalid encoder packet format')
+    counts = tuple(map(int, parts[1:]))
+    if any(not -(2**31) <= count < 2**31 for count in counts):
+        raise ValueError('Encoder count outside int32 range')
+    return dict(zip(('front_left', 'front_right', 'rear_left', 'rear_right'), counts))

@@ -1,0 +1,67 @@
+diff --git a/slam_gmapping/include/slam_gmapping/slam_gmapping.h b/slam_gmapping/include/slam_gmapping/slam_gmapping.h
+index 885f3fc..deaa343 100644
+--- a/slam_gmapping/include/slam_gmapping/slam_gmapping.h
++++ b/slam_gmapping/include/slam_gmapping/slam_gmapping.h
+@@ -89,6 +89,7 @@ private:
+     nav_msgs::msg::OccupancyGrid map_;
+
+     tf2::Duration map_update_interval_;
++    tf2::TimePoint last_map_update_ = tf2::TimePointZero;
+     tf2::Transform map_to_odom_;
+     std::mutex map_to_odom_mutex_;
+     std::mutex map_mutex_;
+diff --git a/slam_gmapping/src/slam_gmapping.cpp b/slam_gmapping/src/slam_gmapping.cpp
+index 2d97cb0..d462cec 100644
+--- a/slam_gmapping/src/slam_gmapping.cpp
++++ b/slam_gmapping/src/slam_gmapping.cpp
+@@ -110,8 +110,5 @@ void SlamGmapping::startLiveSlam()
+   sst_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("map", rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
+   sstm_ = this->create_publisher<nav_msgs::msg::MapMetaData>("map_metadata", rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
+   scan_filter_sub_ = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::LaserScan>>
+-          (this, "scan", rclcpp::SystemDefaultsQoS().get_rmw_qos_profile());
+-//    sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+-//        "scan", rclcpp::SensorDataQoS(),
+-//        std::bind(&SlamGmapping::laserCallback, this, std::placeholders::_1));
++          (this, "scan", rclcpp::SensorDataQoS().get_rmw_qos_profile());
+   scan_filter_ = std::make_shared<tf2_ros::MessageFilter<sensor_msgs::msg::LaserScan>>
+@@ -348,7 +345,7 @@ bool SlamGmapping::addScan(const sensor_msgs::msg::LaserScan::ConstSharedPtr sca
+     GMapping::RangeReading reading(static_cast<unsigned int>(scan->ranges.size()),
+                                    ranges_double,
+                                    gsp_laser_,
+-                                   scan->header.stamp.sec);
++                                   rclcpp::Time(scan->header.stamp).seconds());
+
+     // ...but it deep copies them in RangeReading constructor, so we don't
+     // need to keep our array around.
+@@ -367,8 +364,6 @@ void SlamGmapping::laserCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr sca
+     if ((laser_count_ % throttle_scans_) != 0)
+         return;
+
+-    tf2::TimePoint last_map_update = tf2::TimePointZero;
+-
+     // We can't initialize the mapper until we've got the first scan
+     if(!got_first_scan_)
+     {
+@@ -394,10 +389,10 @@ void SlamGmapping::laserCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr sca
+         map_to_odom_mutex_.unlock();
+
+         tf2::TimePoint timestamp = tf2_ros::fromMsg(scan->header.stamp);
+-        if(!got_map_ || (timestamp - last_map_update) > map_update_interval_)
++        if(!got_map_ || (timestamp - last_map_update_) > map_update_interval_)
+         {
+             updateMap(scan);
+-            last_map_update = tf2_ros::fromMsg(scan->header.stamp);
++            last_map_update_ = timestamp;
+         }
+     }
+ }
+@@ -528,8 +523,7 @@ void SlamGmapping::updateMap(const sensor_msgs::msg::LaserScan::ConstSharedPtr s
+ void SlamGmapping::publishTransform()
+ {
+     map_to_odom_mutex_.lock();
+-    rclcpp::Time tf_expiration = get_clock()->now() + rclcpp::Duration(
+-            static_cast<int32_t>(static_cast<rcl_duration_value_t>(tf_delay_)), 0);
++    rclcpp::Time tf_expiration = get_clock()->now() + rclcpp::Duration::from_seconds(tf_delay_);
+     geometry_msgs::msg::TransformStamped transform;
+     transform.header.frame_id = map_frame_;
+     transform.header.stamp = tf_expiration;

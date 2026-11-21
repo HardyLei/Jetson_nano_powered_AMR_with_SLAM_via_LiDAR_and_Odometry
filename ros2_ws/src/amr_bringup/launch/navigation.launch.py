@@ -1,76 +1,32 @@
-import os
-from pathlib import Path
+"""Run saved-map navigation against an already running robot."""
 
-from ament_index_python.packages import get_package_share_directory
+import os
+
+from ament_index_python.packages import get_package_share_path
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
-    nav2_share = Path(
-        get_package_share_directory('nav2_bringup')
-    )
-    default_map = os.path.expanduser('~/amr_maps/amr.yaml')
-    default_params = str(
-        nav2_share / 'params' / 'nav2_params.yaml'
-    )
-
-    map_yaml = LaunchConfiguration('map')
-    params_file = LaunchConfiguration('params_file')
-    use_rviz = LaunchConfiguration('use_rviz')
-
+    """Keep the standalone navigation arguments as aliases for autonomy."""
+    share = get_package_share_path('amr_bringup')
     return LaunchDescription([
-        DeclareLaunchArgument(
-            'map',
-            default_value=default_map,
-            description='Full path to the saved map YAML file.',
-        ),
-        DeclareLaunchArgument(
-            'params_file',
-            default_value=default_params,
-            description='Full path to the Nav2 parameter file.',
-        ),
-        DeclareLaunchArgument(
-            'use_rviz',
-            default_value='true',
-            description='Start RViz2 with the Nav2 display configuration.',
-        ),
+        DeclareLaunchArgument('map', default_value=os.path.expanduser('~/amr_maps/amr.yaml')),
+        DeclareLaunchArgument('params_file', default_value=str(share / 'config' / 'nav2.yaml')),
+        DeclareLaunchArgument('use_rviz', default_value='true', choices=['true', 'false']),
+        DeclareLaunchArgument('use_ekf', default_value='true', choices=['true', 'false']),
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                str(
-                    nav2_share
-                    / 'launch'
-                    / 'bringup_launch.py'
-                )
-            ),
+            PythonLaunchDescriptionSource(str(share / 'launch' / 'autonomy.launch.py')),
             launch_arguments={
-                'map': map_yaml,
-                'params_file': params_file,
-                'use_sim_time': 'false',
-                'slam': 'false',
-                'use_localization': 'true',
-                'serve_static_map': 'true',
-                'autostart': 'true',
+                'mode': 'navigation',
+                'start_robot': 'false',
+                'explore': 'false',
+                'map': LaunchConfiguration('map'),
+                'nav2_params_file': LaunchConfiguration('params_file'),
+                'rviz': LaunchConfiguration('use_rviz'),
+                'use_ekf': LaunchConfiguration('use_ekf'),
             }.items(),
-        ),
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                str(
-                    nav2_share
-                    / 'launch'
-                    / 'rviz_launch.py'
-                )
-            ),
-            launch_arguments={
-                'namespace': '',
-                'use_sim_time': 'false',
-                'rviz_config': str(
-                    nav2_share / 'rviz' / 'nav2_default_view.rviz'
-                ),
-            }.items(),
-            condition=IfCondition(use_rviz),
         ),
     ])

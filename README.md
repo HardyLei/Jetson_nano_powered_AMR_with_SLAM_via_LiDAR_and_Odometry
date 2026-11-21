@@ -77,9 +77,9 @@ YBIMU
 
 YDLIDAR
     -> /scan
-    -> SLAM Toolbox
+    -> GMapping
 
-SLAM Toolbox
+GMapping
     -> /map
     -> map -> odom
 
@@ -125,25 +125,15 @@ sideways-motion error will normally be greater.
 
 ### SLAM flow
 
-SLAM Toolbox uses the following inputs:
+GMapping consumes best-effort `sensor_msgs/msg/LaserScan` messages on `/scan`.
+It looks up the LiDAR pose at each scan timestamp through
+`odom → base_link → LiDAR_Link`. The X3 configuration keeps the 180° bearing
+correction and an 8 m range limit. The EKF fuses encoder planar velocity and yaw
+rate with IMU yaw rate. GMapping receives the resulting motion through TF.
 
-- YDLIDAR `sensor_msgs/LaserScan` messages on `/scan`
-- The static LiDAR transform from `base_link`
-- Filtered or encoder odometry
-- `/tf` and `/tf_static`
-
-During mapping, SLAM Toolbox estimates the robot pose against the generated
-occupancy map and publishes:
-
-- `/map` as the occupancy grid
-- `map -> odom` as the SLAM correction transform
-
-Robot Localization or the encoder odometry node provides `odom -> base_link`.
-SLAM Toolbox provides `map -> odom`. Together they complete the robot pose:
-
-```text
-map pose = map -> odom -> base_link
-```
+GMapping publishes `nav_msgs/msg/OccupancyGrid` on `/map` at 0.05 m resolution
+and broadcasts `map → odom`. The map is reliable and transient local so Nav2
+and RViz can receive the latest grid when they join after mapping has started.
 
 ### Navigation flow
 
@@ -203,12 +193,12 @@ and have zero Z.
 | Transform | Primary publisher |
 |---|---|
 | `odom -> base_link` | Encoder odometry, or Robot Localization EKF |
-| `map -> odom` | SLAM Toolbox, or AMCL for an existing map |
+| `map -> odom` | GMapping, or AMCL for an existing map |
 | `base_link -> LiDAR_Link` | `robot_state_publisher` from `amr.urdf` |
 | `base_link -> IMU_Link` | `robot_state_publisher` from `amr.urdf` |
 | `base_link -> wheel links` | `robot_state_publisher` from `amr.urdf` |
 
-Do not run SLAM Toolbox mapping and AMCL at the same time. Both provide
+Do not run GMapping mapping and AMCL at the same time. Both provide
 `map -> odom`, so they will compete for that transform.
 
 ## Frame Naming
@@ -236,28 +226,6 @@ z = 0.192 m
 
 An extra transform with a different parent-child name or pose will create TF
 conflicts.
-
-## Recommended Bringup Sequence
-
-Launch and start the components in this order:
-
-1. `robot_state_publisher` with `amr.urdf`
-2. `serial_interface_node`
-3. `odometry_node`
-4. YBIMU driver and Madgwick IMU filter
-5. Robot Localization EKF
-6. YDLIDAR driver
-7. SLAM Toolbox
-8. Nav2
-9. RViz2
-
-For mapping, run SLAM Toolbox in mapping mode and use Nav2 navigation goals
-from RViz. For navigation using an existing saved map, run:
-
-- `map_server` to load the map
-- Nav2
-- AMCL for localization, or SLAM Toolbox in localization mode
-- No competing mapping/localization TF publisher
 
 ## ROS 2 Packages
 
@@ -289,128 +257,116 @@ from RViz. For navigation using an existing saved map, run:
 
 Arduino motor and encoder test firmware is available in [`scripts`](scripts).
 
-## Containerized Development
+## Humble Docker image
 
-The project provides a reproducible ROS 2 Humble development environment
-through [`.devcontainer/Dockerfile`](.devcontainer/Dockerfile) and
-[`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
+Run the project inside Docker on both machines. The VM can keep ROS 2 Lyrical
+on its host. The project scripts use ROS 2 Humble in the container with
+`ROS_DOMAIN_ID=67` by default on both machines. Use host networking and
+synchronize the Jetson and VM clocks so scan timestamps match the TF history.
 
-The container installs:
+Run `./scripts/build_image.sh` from the repository root on each machine after
+switching to this branch and after changes to the Dockerfile or its source
+patches. The startup scripts build the image if it is missing, replace this
+checkout's container after an image rebuild, and build the mounted workspace
+before launching.
 
-- ROS 2 Humble, Colcon, CMake, and build tools
-- YDLidar SDK build dependencies
-- SLAM Toolbox
-- Navigation2 and Nav2 Bringup
-- Robot Localization
-- `pyserial` and `smbus2`
-- The local YBIMU Python library
+The image builds [GMHadou/slam_gmapping_Humble](https://github.com/GMHadou/slam_gmapping_Humble/tree/7ffe2f768bcd75b5158a41937fcc2abd33173143)
+at revision `7ffe2f768bcd75b5158a41937fcc2abd33173143`, including its
+`openslam_gmapping` package. This port is based on
+[Project-MANAS/slam_gmapping](https://github.com/Project-MANAS/slam_gmapping)
+and already publishes a transient-local map. The project patch uses
+`SensorDataQoS` for the X3 scan, preserves subsecond timing, and applies the
+configured map update interval across scans.
+GMapping is absent from the official Humble distribution. Humble's
+`nav2_bringup` can still install SLAM Toolbox transitively. The AMR live
+launches use GMapping.
 
-The ROS 2 workspace is mounted at `/workspace`. Host networking and privileged
-container access are enabled for serial devices, LiDAR communication, and
-hardware testing.
+## Split startup and stationary verification
 
-## Building
-
-Open the project in the provided development container, then build the ROS 2
-workspace:
-
-```bash
-cd /workspace
-source /opt/ros/humble/setup.bash
-colcon build --symlink-install
-source install/setup.bash
-```
-
-## Useful Launch Commands
-
-Launch the mecanum controller:
+On the Jetson, from the repository root:
 
 ```bash
-ros2 launch amr_control mecanum_controller.launch.py
+./scripts/start_robot.sh use_ekf:=true explore:=true enable_motor_commands:=false lidar_port:=/dev/ttyUSB0 imu_port:=/dev/ttyUSB1 arduino_port:=/dev/ttyUSB2
 ```
 
-Launch encoder odometry:
+On the Ubuntu VM, from the repository root in a graphical session:
 
 ```bash
-ros2 launch amr_control odometry.launch.py
+./scripts/start_vm.sh
 ```
 
-Launch the hardware serial interface:
+The Jetson runs the sensors, Arduino bridge, EKF, and frontier explorer. The VM
+runs GMapping, Nav2, and RViz. Use this pairing for split operation. Running
+`start.sh` on the Jetson alongside `start_vm.sh` can duplicate the mapper and
+Nav2 action servers on domain 67.
+
+Use a second VM terminal and run `./scripts/shell.sh --vm`. In the container,
+check the scan and map QoS, the single live map publisher, and the TF chain:
 
 ```bash
-ros2 launch amr_hardware hardware.launch.py
+ros2 topic info -v /scan
+ros2 topic info -v /map
+ros2 topic echo /map --once --field info --qos-durability transient_local
+ros2 run tf2_ros tf2_echo map odom
+ros2 run tf2_ros tf2_echo odom base_link
+ros2 run tf2_ros tf2_echo map LiDAR_Link
+ros2 topic echo /odometry/filtered --once
+ros2 topic echo /global_costmap/costmap --once --field info --qos-durability transient_local
+ros2 action info /navigate_to_pose
 ```
 
-Launch the YDLIDAR driver or its RViz visualization configuration:
+In RViz, use `map` as the fixed frame and confirm the scan, map, and robot
+overlay. The explorer starts paused. With motor commands disabled, select
+**Explore** to check for a frontier goal when the map has reachable unknown
+space, then select **RViz Goals** to pause exploration and try a **Nav2 Goal**.
+A goal that requires movement cannot finish during this stationary check.
+
+For an authorized, supervised motion test after the stationary checks pass,
+stop the Jetson launch and repeat its command with
+`enable_motor_commands:=true`. Keep the VM launch running. Start with a short
+RViz goal in a clear area before selecting **Explore**. The RViz panel also
+provides **Manual Drive** and hold-to-rotate controls.
+
+## All-in-one Jetson startup
+
+Use `start.sh` by itself when the Jetson will run the whole stack. Use a local
+graphical session for RViz, or pass `rviz:=false` for headless use.
 
 ```bash
-ros2 launch ydlidar_ros2_driver ydlidar_launch.py
-ros2 launch ydlidar_ros2_driver view_ydlidar_launch.py
+./scripts/start.sh use_ekf:=true explore:=true rviz:=true enable_motor_commands:=false lidar_port:=/dev/ttyUSB0 imu_port:=/dev/ttyUSB1 arduino_port:=/dev/ttyUSB2
 ```
 
-Launch the complete AMR hardware stack:
+## Save a map and navigate with AMCL
+
+While mapping is running, open a second container shell with
+`./scripts/shell.sh --vm` on the split VM or `./scripts/shell.sh` on the
+all-in-one Jetson. Save the occupancy grid into the mounted workspace:
 
 ```bash
-ros2 launch amr_bringup bringup.launch.py
+mkdir -p /workspace/maps
+ros2 run nav2_map_server map_saver_cli -f /workspace/maps/amr --ros-args -p map_subscribe_transient_local:=true
 ```
 
-Launch with Robot Localization enabled. The encoder node must not also publish
-`odom -> base_link`, because the EKF is the sole publisher:
+Keep `ros2_ws/maps/amr.yaml` and its image together. For split operation, stop
+the VM mapping launch and restart the Jetson command with `explore:=false`.
+Then run from the VM repository root:
 
 ```bash
-ros2 launch amr_bringup bringup.launch.py \
-  use_localization:=true publish_odom_tf:=false
+./scripts/start_vm.sh mode:=navigation map:=/workspace/maps/amr.yaml
 ```
 
-## PC-side Mapping and Navigation Launches
+For all-in-one operation, stop the live launch and repeat the Jetson
+`start.sh` command with `mode:=navigation explore:=false
+map:=/workspace/maps/amr.yaml`. The map server publishes `/map` and AMCL owns
+`map → odom`. Use **2D Pose Estimate** in RViz to seed AMCL before sending
+a **Nav2 Goal**.
 
-The Jetson runs the hardware bringup and EKF. Run these launch files from the
-PC without starting hardware nodes:
-
-### Mapping mode
-
-```bash
-source /opt/ros/humble/setup.bash
-export ROS_DOMAIN_ID=0
-
-ros2 launch amr_bringup mapping.launch.py
-```
-
-This starts SLAM Toolbox, RViz2, and keyboard teleoperation. Disable optional
-PC components with:
-
-```bash
-ros2 launch amr_bringup mapping.launch.py \
-  use_rviz:=false use_teleop:=false
-```
-
-Save the completed map by running this on the PC:
-
-```bash
-mkdir -p ~/amr_maps
-ros2 run nav2_map_server map_saver_cli -f ~/amr_maps/amr
-```
-
-### Navigation mode
-
-After creating `~/amr_maps/amr.yaml` and `~/amr_maps/amr.pgm`, launch Nav2:
-
-```bash
-source /opt/ros/humble/setup.bash
-export ROS_DOMAIN_ID=0
-
-ros2 launch amr_bringup navigation.launch.py \
-  map:=/home/$USER/amr_maps/amr.yaml
-```
-
-Navigation mode starts AMCL, the static map server, Nav2, and RViz. Use
-**2D Pose Estimate** in RViz before sending a **Nav2 Goal**.
-
-Individual components can be disabled with launch arguments, for example:
-
-```bash
-ros2 launch amr_bringup bringup.launch.py use_lidar:=false use_imu:=false
-```
+Inside a sourced container, `autonomy.launch.py` selects the mode and
+`start_robot:=false` selects an external robot. The standalone
+`slam.launch.py` starts GMapping with local sensors and an optional base.
+`mapping.launch.py` starts GMapping against external scans and TF, with
+optional RViz and keyboard teleoperation. `navigation.launch.py` launches
+saved-map navigation against an external robot.
 
 ## Hardware Defaults
 

@@ -8,6 +8,7 @@ from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -42,6 +43,12 @@ def generate_launch_description():
             'use_hardware',
             default_value='true',
             description='Start the serial motor and encoder interface.',
+        ),
+        DeclareLaunchArgument(
+            'enable_motor_commands',
+            default_value='false',
+            choices=['true', 'false'],
+            description='Enable sending wheel commands to the Arduino.',
         ),
         DeclareLaunchArgument(
             'use_imu',
@@ -96,7 +103,10 @@ def generate_launch_description():
             executable='serial_interface_node',
             name='serial_interface_node',
             parameters=[
-                str(hardware_share / 'config' / 'hardware.yaml')
+                str(hardware_share / 'config' / 'hardware.yaml'),
+                {'enable_motor_commands': ParameterValue(
+                    LaunchConfiguration('enable_motor_commands'), value_type=bool,
+                )},
             ],
             condition=IfCondition(LaunchConfiguration('use_hardware')),
             output='screen',

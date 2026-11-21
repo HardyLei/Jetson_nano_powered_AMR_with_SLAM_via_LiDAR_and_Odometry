@@ -1,55 +1,30 @@
-from ament_index_python.packages import get_package_share_path, get_package_share_directory
+"""Display the running IMU in RViz, with optional driver startup."""
 
+from ament_index_python.packages import get_package_share_path
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.conditions import IfCondition, UnlessCondition
-from launch.substitutions import Command, LaunchConfiguration
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from launch_ros.parameter_descriptions import ParameterValue
-
-import os
 
 
 def generate_launch_description():
-
-    package_path = get_package_share_path('ybimu_device')
-    default_rviz_config_path = package_path / 'rviz/ybimu.rviz'
-    print("config path:", default_rviz_config_path)
-
-    rviz_arg = DeclareLaunchArgument(name='rvizconfig', default_value=str(default_rviz_config_path),
-                                     description='Absolute path to rviz config file')
-
-    rviz_node = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        output='screen',
-        arguments=['-d', LaunchConfiguration('rvizconfig')],
-    )
-
-    device_node = Node(
-        package='imu_ros2_device',
-        executable='ybimu_driver',
-    )
-
-    imu_filter_config = os.path.join(              
-        get_package_share_directory('imu_ros2_device'),
-        'config',
-        'imu_filter_param.yaml'
-    )
-
-    imu_filter_node = Node(
-        package='imu_filter_madgwick',
-        executable='imu_filter_madgwick_node',
-        parameters=[imu_filter_config]
-    )
-
+    """Use the running IMU by default so only one driver owns the port."""
+    share = get_package_share_path('imu_ros2_device')
+    args = {'port': '/dev/myimu', 'rate_hz': '50.0', 'accel_scale': '9.80665', 'gyro_scale': '1.0'}
     return LaunchDescription([
-        rviz_arg,
-        rviz_node,
-        device_node,
-        imu_filter_node,
+        DeclareLaunchArgument('rvizconfig', default_value=str(share / 'rviz' / 'ybimu.rviz')),
+        DeclareLaunchArgument('start_driver', default_value='false',
+                              description='Set true only if the serial IMU is stopped'),
+        *(DeclareLaunchArgument(key, default_value=value) for key, value in args.items()),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(str(share / 'launch' / 'ybimu.launch.py')),
+            condition=IfCondition(LaunchConfiguration('start_driver')),
+            launch_arguments={key: LaunchConfiguration(key) for key in args}.items(),
+        ),
+        Node(
+            package='rviz2', executable='rviz2', output='screen',
+            arguments=['-d', LaunchConfiguration('rvizconfig')],
+        ),
     ])
-
