@@ -12,7 +12,8 @@ def generate_launch_description():
     """Configure one IMU driver and filter."""
     config = get_package_share_path('imu_ros2_device') / 'config' / 'imu_filter_param.yaml'
     args = {'port': ('/dev/myimu', str), 'rate_hz': ('50.0', float),
-            'accel_scale': ('9.80665', float), 'gyro_scale': ('1.0', float)}
+            'accel_scale': ('9.80665', float), 'gyro_scale': ('1.0', float),
+            'rotate_yaw_180': ('false', bool)}
     return LaunchDescription([
         *(DeclareLaunchArgument(key, default_value=default)
           for key, (default, _) in args.items()),

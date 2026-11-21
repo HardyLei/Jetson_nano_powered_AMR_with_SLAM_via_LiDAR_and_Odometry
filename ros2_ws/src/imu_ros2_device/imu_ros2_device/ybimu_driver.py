@@ -21,6 +21,7 @@ class YbImuDriver(Node):
         port = self.declare_parameter('port', '/dev/myimu').value
         rate = self.declare_parameter('rate_hz', 50.0).value
         self.frame_id = self.declare_parameter('frame_id', 'IMU_Link').value
+        self.rotate_yaw_180 = self.declare_parameter('rotate_yaw_180', False).value
         # YbImuLib returns acceleration in g and gyro in rad/s.
         self.accel_scale = self.declare_parameter('accel_scale', 9.80665).value
         self.max_sample_age = self.declare_parameter('max_sample_age_sec', 0.5).value
@@ -69,6 +70,11 @@ class YbImuDriver(Node):
         ax, ay, az = self.robot.get_accelerometer_data()
         gx, gy, gz = self.robot.get_gyroscope_data()
         qw, qx, qy, qz = self.robot.get_imu_quaternion_data()
+        if self.rotate_yaw_180:
+            ax, ay = -ax, -ay
+            gx, gy = -gx, -gy
+            # Postmultiply the orientation by the 180-degree body-frame rotation.
+            qw, qx, qy, qz = -qz, qy, -qx, qw
         imu.linear_acceleration.x = ax * self.accel_scale
         imu.linear_acceleration.y = ay * self.accel_scale
         imu.linear_acceleration.z = az * self.accel_scale
@@ -88,6 +94,8 @@ class YbImuDriver(Node):
 
         try:
             mx, my, mz = self.robot.get_magnetometer_data()
+            if self.rotate_yaw_180:
+                mx, my = -mx, -my
             mag = MagneticField()
             mag.header = imu.header
             mag.magnetic_field.x = mx
@@ -102,7 +110,10 @@ class YbImuDriver(Node):
         except Exception as exc:
             self.get_logger().warning(f'Barometer unavailable: {exc}', once=True)
 
-        self.euler_pub.publish(Float32MultiArray(data=self.robot.get_imu_attitude_data(True)))
+        roll, pitch, yaw = self.robot.get_imu_attitude_data(True)
+        if self.rotate_yaw_180:
+            roll, pitch, yaw = -roll, -pitch, yaw % 360.0 - 180.0
+        self.euler_pub.publish(Float32MultiArray(data=[roll, pitch, yaw]))
 
 
 def main(args=None):

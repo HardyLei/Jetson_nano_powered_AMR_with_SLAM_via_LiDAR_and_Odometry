@@ -8,8 +8,8 @@
     name="base_link">
     <inertial>
       <origin
-        xyz="0.00684848222205554 -5.63696236989484E-07 0.0106907624902936"
-        rpy="0 0 0" />
+        xyz="-0.00684848222205554 5.63696236989484E-07 0.0106907624902936"
+        rpy="0 0 3.14159265359" />
       <mass
         value="0.398031065440084" />
       <inertia
@@ -23,7 +23,7 @@
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 3.14159265359" />
+        rpy="0 0 0" />
       <geometry>
         <mesh
           filename="package://amr_description/meshes/base_link.STL" />
@@ -88,7 +88,7 @@
     name="base-lidar_joint"
     type="fixed">
     <origin
-      xyz="0.091609 0.00013794 0.192"
+      xyz="0.091609 -0.00013794 0.192"
       rpy="0 0 0" />
     <parent
       link="base_link" />
@@ -101,8 +101,8 @@
     name="IMU_Link">
     <inertial>
       <origin
-        xyz="0 2.9289E-20 -0.0008"
-        rpy="0 0 0" />
+        xyz="0 -2.9289E-20 -0.0008"
+        rpy="0 0 3.14159265359" />
       <mass
         value="0.0011958" />
       <inertia
@@ -116,7 +116,7 @@
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 3.14159265359" />
       <geometry>
         <mesh
           filename="package://amr_description/meshes/IMU_Link.STL" />
@@ -130,7 +130,7 @@
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 3.14159265359" />
       <geometry>
         <mesh
           filename="package://amr_description/meshes/IMU_Link.STL" />
@@ -154,8 +154,8 @@
     name="front-left-wheel_link">
     <inertial>
       <origin
-        xyz="2.3952E-07 0.00069909 2.4434E-07"
-        rpy="0 0 0" />
+        xyz="-2.3952E-07 -0.00069909 2.4434E-07"
+        rpy="0 0 3.14159265359" />
       <mass
         value="0.17845" />
       <inertia
@@ -169,7 +169,7 @@
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 3.14159265359" />
       <geometry>
         <mesh
           filename="package://amr_description/meshes/front-left-wheel_link.STL" />
@@ -183,7 +183,7 @@
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 3.14159265359" />
       <geometry>
         <mesh
           filename="package://amr_description/meshes/front-left-wheel_link.STL" />
@@ -194,21 +194,21 @@
     name="base-front-left-wheel_joint"
     type="continuous">
     <origin
-      xyz="0.08250000000001 0.1031 -0.0355"
+      xyz="0.08250000000001 -0.1031 -0.0355"
       rpy="0 0 0" />
     <parent
       link="base_link" />
     <child
       link="front-left-wheel_link" />
     <axis
-      xyz="0 -1 0" />
+      xyz="0 1 0" />
   </joint>
   <link
     name="rear-left-wheel_link">
     <inertial>
       <origin
-        xyz="1.12714871908226E-07 0.000699092330700035 3.23062502187443E-07"
-        rpy="0 0 0" />
+        xyz="-1.12714871908226E-07 -0.000699092330700035 3.23062502187443E-07"
+        rpy="0 0 3.14159265359" />
       <mass
         value="0.178447602520797" />
       <inertia
@@ -222,7 +222,7 @@
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 3.14159265359" />
       <geometry>
         <mesh
           filename="package://amr_description/meshes/rear-left-wheel_link.STL" />
@@ -236,7 +236,7 @@
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 3.14159265359" />
       <geometry>
         <mesh
           filename="package://amr_description/meshes/rear-left-wheel_link.STL" />
@@ -247,21 +247,21 @@
     name="base-rear-left-wheel_joint"
     type="continuous">
     <origin
-      xyz="-0.0825 0.1031 -0.0355"
+      xyz="-0.0825 -0.1031 -0.0355"
       rpy="0 0 0" />
     <parent
       link="base_link" />
     <child
       link="rear-left-wheel_link" />
     <axis
-      xyz="0 -1 0" />
+      xyz="0 1 0" />
   </joint>
   <link
     name="front-right-wheel_link">
     <inertial>
       <origin
-        xyz="-2.4019E-07 -0.00069909 -2.4369E-07"
-        rpy="0 0 0" />
+        xyz="2.4019E-07 0.00069909 -2.4369E-07"
+        rpy="0 0 3.14159265359" />
       <mass
         value="0.17845" />
       <inertia
@@ -275,7 +275,7 @@
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 3.14159265359" />
       <geometry>
         <mesh
           filename="package://amr_description/meshes/front-right-wheel_link.STL" />
@@ -289,7 +289,7 @@
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 3.14159265359" />
       <geometry>
         <mesh
           filename="package://amr_description/meshes/front-right-wheel_link.STL" />
@@ -300,21 +300,21 @@
     name="base-front-right-wheel_joint"
     type="continuous">
     <origin
-      xyz="0.0825 -0.1031 -0.0355"
+      xyz="0.0825 0.1031 -0.0355"
       rpy="0 0 0" />
     <parent
       link="base_link" />
     <child
       link="front-right-wheel_link" />
     <axis
-      xyz="0 1 0" />
+      xyz="0 -1 0" />
   </joint>
   <link
     name="rear-right-wheel_link">
     <inertial>
       <origin
-        xyz="6.5816E-08 -0.00069909 -3.3577E-07"
-        rpy="0 0 0" />
+        xyz="-6.5816E-08 0.00069909 -3.3577E-07"
+        rpy="0 0 3.14159265359" />
       <mass
         value="0.17845" />
       <inertia
@@ -328,7 +328,7 @@
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 3.14159265359" />
       <geometry>
         <mesh
           filename="package://amr_description/meshes/rear-right-wheel_link.STL" />
@@ -342,7 +342,7 @@
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 3.14159265359" />
       <geometry>
         <mesh
           filename="package://amr_description/meshes/rear-right-wheel_link.STL" />
@@ -353,13 +353,13 @@
     name="base-rear-right-wheel_joint"
     type="continuous">
     <origin
-      xyz="-0.0825 -0.1031 -0.0355"
+      xyz="-0.0825 0.1031 -0.0355"
       rpy="0 0 0" />
     <parent
       link="base_link" />
     <child
       link="rear-right-wheel_link" />
     <axis
-      xyz="0 1 0" />
+      xyz="0 -1 0" />
   </joint>
 </robot>

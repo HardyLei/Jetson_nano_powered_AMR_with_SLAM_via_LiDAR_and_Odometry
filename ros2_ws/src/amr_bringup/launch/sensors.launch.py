@@ -30,6 +30,7 @@ def generate_launch_description():
                 'rate_hz': LaunchConfiguration('imu_rate_hz'),
                 'accel_scale': LaunchConfiguration('accel_scale'),
                 'gyro_scale': LaunchConfiguration('gyro_scale'),
+                'rotate_yaw_180': 'true',
             }.items(),
         ),
         Node(
