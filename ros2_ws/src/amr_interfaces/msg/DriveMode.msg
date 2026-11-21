@@ -1,0 +1,2 @@
+bool navigation_enabled
+string manual_session

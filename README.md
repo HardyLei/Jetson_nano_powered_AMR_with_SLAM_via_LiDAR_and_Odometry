@@ -90,6 +90,29 @@ paused.
 SLAM Toolbox updates the same live map in both modes. If you close a panel,
 reopen it from the **Panels** menu by checking **Exploration** or **Navigation 2**.
 
+### Drive with the keyboard or rotate buttons
+
+Click **Manual Drive** in the Exploration panel to pause exploration, cancel
+the current Nav2 goal, and take control of the base.
+
+| Control | Motion |
+| --- | --- |
+| Hold **Space + ↑ / ↓** | Drive forward or backward |
+| Hold **Space + ← / →** | Turn left or right |
+| Hold **Space + Shift + ← / →** | Strafe left or right |
+| Hold **Rotate Left** or **Rotate Right** | Turn in place for as long as the button is held |
+
+Keep the panel focused for keyboard input. Releasing the controls or leaving
+the panel stops manual motion. One RViz window can own manual control at a
+time. If that window disconnects, the Jetson stops and waits for a new mode
+selection. Click **RViz Goals** or **Explore** to hand control back to Nav2.
+SLAM Toolbox continues updating the map while you drive manually.
+
+For a split setup, update the Jetson and every RViz workstation together so
+they have the same manual-drive interfaces. A separate RViz-only checkout
+also needs to build `amr_interfaces` alongside `amr_description` and
+`amr_rviz`. The existing startup scripts build the workspace automatically.
+
 ### Control exploration from a terminal
 
 Set `rviz:=false` when launching from SSH without a display. Open a second
@@ -215,7 +238,7 @@ See the [troubleshooting guide](docs/TROUBLESHOOTING.md) for more checks.
 | `amr_bringup` | Launches the sensors, robot transforms, drive base, and autonomy stack. |
 | YDLIDAR and Yahboom drivers | Publish `/scan` and `/imu/data_raw`. The Madgwick filter publishes `/imu/data`. |
 | `amr_hardware` | Sends signed PWM commands to the Arduino and publishes encoder counts on `/encoder_ticks`. Per-wheel PWM floors help overcome starting friction, and zero commands still send zero PWM. |
-| `amr_control` | Converts `/cmd_vel` to mecanum wheel commands and publishes wheel odometry on `/odom`. |
+| `amr_control` | Selects Nav2 or manual drive commands on the Jetson, converts them to mecanum wheel commands, and publishes wheel odometry on `/odom`. |
 | `robot_localization` | With `use_ekf:=true`, fuses wheel motion from `/odom` with yaw rate from `/imu/data` and publishes `/odometry/filtered`. |
 | `amr_description` | Provides the URDF and meshes for RViz, including the lidar mounting transform checked on the physical AMR. |
 | `amr_rviz` | Provides the Exploration panel. Its buttons send commands on `/explore/resume`, and its label follows `/explore/status`. |
