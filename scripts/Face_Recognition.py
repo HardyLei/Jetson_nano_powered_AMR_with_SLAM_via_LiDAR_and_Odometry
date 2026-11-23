@@ -2,7 +2,7 @@
 """
 AMR face recognition + door control (Jetson Nano, CSI camera).
 
-Detects faces (OpenCV Haar), recognises ishmam / rafay against a known_faces/
+Detects faces (OpenCV Haar), recognises people against the scripts/known_faces/
 folder using `face_recognition`, and triggers the Arduino door servo on A3
 when a known person is seen.
 
@@ -11,15 +11,15 @@ returns to 0. It handles the timer even if face recognition stops.
 
 On the Jetson, ./scripts/start_robot.sh starts this script on the host and
 forwards its DOOR,OPEN requests through the running Arduino bridge. Place
-known_faces/ in the repository root. To skip the camera, start the robot
+reference photos in scripts/known_faces/. To skip the camera, start the robot
 with AMR_FACE_RECOGNITION=0.
 
 For a standalone test with the Arduino bridge stopped, run on the Jetson host:
 
-    python3 scripts/Face_Recognition.py --known-dir known_faces --arduino-port /dev/amr
+    python3 scripts/Face_Recognition.py --arduino-port /dev/amr
 
-known_faces/ layout — one image per person, the filename is the label:
-    known_faces/
+Reference photo layout — one image per person, the filename is the label:
+    scripts/known_faces/
         ishmam.jpeg
         rafay.jpeg
 
@@ -49,6 +49,9 @@ try:
     HAS_SERIAL = True
 except ImportError:
     HAS_SERIAL = False
+
+
+KNOWN_FACES_DIR = Path(__file__).resolve().with_name('known_faces')
 
 
 def gstreamer_pipeline(sensor_id=0, capture_width=1280, capture_height=720,
@@ -187,12 +190,12 @@ def main():
     parser.add_argument('--sensor', type=int, default=0, help='CSI sensor_id')
     parser.add_argument('--scale', type=float, default=0.5,
                         help='downscale factor to speed up detection')
-    parser.add_argument('--known-dir', default='known_faces',
-                        help='folder with reference face photos')
+    parser.add_argument('--known-dir', default=KNOWN_FACES_DIR,
+                        help='reference photo folder (defaults to scripts/known_faces)')
     parser.add_argument('--tolerance', type=float, default=0.6,
                         help='lower = stricter match (0.4-0.6 typical)')
     parser.add_argument('--enroll', metavar='NAME',
-                        help='capture a face and save it as known_faces/<NAME>.jpeg, then exit')
+                        help='save a reference photo as <NAME>.jpeg in the known faces folder')
     parser.add_argument('--arduino-port',
                         help='direct serial port for standalone use with the bridge stopped')
     parser.add_argument('--arduino-baud', type=int, default=115200)
@@ -210,6 +213,8 @@ def main():
               file=sys.stderr)
 
     known_encodings, known_names = load_known_faces(args.known_dir)
+    if HAS_RECOG and not known_encodings:
+        print(f'WARNING: no reference faces loaded from {args.known_dir}.', file=sys.stderr)
 
     cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')

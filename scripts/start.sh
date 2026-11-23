@@ -59,8 +59,7 @@ docker exec --workdir /workspace "$AMR_CONTAINER" flock -n /tmp/amr-launch.lock 
 
 if [[ $launch_file == robot.launch.py && ${AMR_FACE_RECOGNITION:-1} == 1 ]]; then
     echo 'HOST Starting face recognition on the Jetson.'
-    python3 -u "$AMR_ROOT/scripts/Face_Recognition.py" \
-        --known-dir "$AMR_ROOT/known_faces" --no-display &
+    python3 -u "$AMR_ROOT/scripts/Face_Recognition.py" --no-display &
     face_pid=$!
     stop_face_recognition() {
         if jobs -pr | grep -Fxq "$face_pid"; then
