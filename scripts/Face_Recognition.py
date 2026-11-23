@@ -145,7 +145,7 @@ def enroll_face(name, args):
             cv2.imshow('Enroll ' + name, frame)
             key = cv2.waitKey(1) & 0xFF
             if key == ord('s'):
-                if not boxes:
+                if len(boxes) == 0:
                     print('No face detected - get closer / improve light.')
                     continue
                 (x, y, w, h) = max(boxes, key=lambda b: b[2] * b[3])
