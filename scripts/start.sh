@@ -56,4 +56,21 @@ docker exec --workdir /workspace "$AMR_CONTAINER" flock -n /tmp/amr-launch.lock 
     export MAKEFLAGS=-j2
     colcon build --executor sequential --symlink-install --packages-ignore ydlidar_sdk
 '
-amr_exec flock -n --no-fork /tmp/amr-launch.lock ros2 launch amr_bringup "$launch_file" "$@"
+
+if [[ $launch_file == robot.launch.py && ${AMR_FACE_RECOGNITION:-1} == 1 ]]; then
+    echo 'HOST Starting face recognition on the Jetson.'
+    python3 -u "$AMR_ROOT/scripts/Face_Recognition.py" \
+        --known-dir "$AMR_ROOT/known_faces" --no-display &
+    face_pid=$!
+    stop_face_recognition() {
+        if jobs -pr | grep -Fxq "$face_pid"; then
+            kill "$face_pid" 2>/dev/null || true
+        fi
+        wait "$face_pid" 2>/dev/null || true
+    }
+    trap stop_face_recognition EXIT
+fi
+
+amr_exec flock -n --no-fork /tmp/amr-launch.lock \
+    env AMR_DOOR_SOCKET=/workspace/build/amr-door.sock \
+    ros2 launch amr_bringup "$launch_file" "$@"

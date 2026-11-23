@@ -3,17 +3,20 @@
 AMR face recognition + door control (Jetson Nano, CSI camera).
 
 Detects faces (OpenCV Haar), recognises ishmam / rafay against a known_faces/
-folder using `face_recognition`, and opens the container door (SG90 servo on
-the Arduino) over the Arduino's serial port when a known person is seen.
+folder using `face_recognition`, and triggers the Arduino door servo on A3
+when a known person is seen.
 
-Arduino side (motor_encoder_deployment.ino) now accepts:
-    DOOR,OPEN     -> open the door
-    DOOR,CLOSE    -> close the door
-    DOOR,<0-180>  -> set an exact angle
+The firmware moves the servo from 0 to 180 degrees for five seconds and
+returns to 0. It handles the timer even if face recognition stops.
 
-Run on the JETSON HOST (the ros:humble container has no nvarguscamerasrc):
+On the Jetson, ./scripts/start_robot.sh starts this script on the host and
+forwards its DOOR,OPEN requests through the running Arduino bridge. Place
+known_faces/ in the repository root. To skip the camera, start the robot
+with AMR_FACE_RECOGNITION=0.
 
-    python3 face_recognition.py --known-dir known_faces --arduino-port /dev/amr
+For a standalone test with the Arduino bridge stopped, run on the Jetson host:
+
+    python3 scripts/Face_Recognition.py --known-dir known_faces --arduino-port /dev/amr
 
 known_faces/ layout — one image per person, the filename is the label:
     known_faces/
@@ -28,6 +31,8 @@ Dependencies (host):
 import argparse
 import glob
 import os
+from pathlib import Path
+import socket
 import sys
 import time
 
@@ -95,15 +100,18 @@ def recognize(face_enc, known_encodings, known_names, tolerance):
     return name, float(distances[best])
 
 
-def send_door(ser, command):
-    """Write a DOOR command to the Arduino; return True on success."""
-    if ser is None:
-        return False
+def send_door_open(ser, door_socket):
+    """Send one open request to the bridge or to a standalone Arduino."""
     try:
-        ser.write((command + '\n').encode())
+        if ser is not None:
+            ser.write(b'DOOR,OPEN\n')
+        else:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as client:
+                client.setblocking(False)
+                client.sendto(b'DOOR,OPEN', str(door_socket))
         return True
-    except Exception as exc:  # pragma: no cover - depends on wiring
-        print(f'ERROR writing to Arduino: {exc}', file=sys.stderr)
+    except OSError as exc:
+        print(f'WARNING: cannot send door request: {exc}', file=sys.stderr)
         return False
 
 
@@ -185,11 +193,9 @@ def main():
                         help='lower = stricter match (0.4-0.6 typical)')
     parser.add_argument('--enroll', metavar='NAME',
                         help='capture a face and save it as known_faces/<NAME>.jpeg, then exit')
-    parser.add_argument('--arduino-port', default='/dev/amr',
-                        help='Arduino serial port (e.g. /dev/amr or /dev/ttyACM0)')
+    parser.add_argument('--arduino-port',
+                        help='direct serial port for standalone use with the bridge stopped')
     parser.add_argument('--arduino-baud', type=int, default=115200)
-    parser.add_argument('--open-sec', type=float, default=5.0,
-                        help='keep the door open this long after last recognition')
     parser.add_argument('--no-door', action='store_true',
                         help='recognise only; do not open the serial door control')
     parser.add_argument('--no-display', action='store_true',
@@ -202,21 +208,6 @@ def main():
     if not HAS_RECOG:
         print('WARNING: face_recognition not installed — detection only.',
               file=sys.stderr)
-
-    # --- door serial link (optional) ---
-    ser = None
-    if not args.no_door:
-        if not HAS_SERIAL:
-            print('WARNING: pyserial not installed; door control disabled.',
-                  file=sys.stderr)
-        else:
-            try:
-                ser = serial.Serial(args.arduino_port, args.arduino_baud, timeout=1)
-                print(f'Door control ready on {args.arduino_port}.')
-            except Exception as exc:
-                print(f'WARNING: cannot open {args.arduino_port}: {exc}. '
-                      'Door control disabled.', file=sys.stderr)
-                ser = None
 
     known_encodings, known_names = load_known_faces(args.known_dir)
 
@@ -237,10 +228,28 @@ def main():
               file=sys.stderr)
         return 1
 
-    door_open = False
-    last_seen = 0.0
+    ser = None
+    door_socket = None
+    if not args.no_door:
+        if args.arduino_port is None:
+            door_socket = Path(__file__).resolve().parents[1] / 'ros2_ws/build/amr-door.sock'
+        elif not HAS_SERIAL:
+            print('WARNING: pyserial not installed; door control disabled.', file=sys.stderr)
+        else:
+            try:
+                ser = serial.Serial(
+                    args.arduino_port, args.arduino_baud, write_timeout=0.5, exclusive=True,
+                )
+            except OSError as exc:
+                print(f'WARNING: cannot open {args.arduino_port}: {exc}. '
+                      'Door control disabled.', file=sys.stderr)
+
+    door_target = args.arduino_port if ser is not None else door_socket
+    triggered = False
+    next_door_attempt = 0.0
+    previous_status = None
     print(f'Recognition running. known={known_names} display={not args.no_display} '
-          f'door={"off" if ser is None else args.arduino_port}')
+          f'door={door_target or "off"}')
     try:
         while True:
             ok, frame = cap.read()
@@ -267,20 +276,22 @@ def main():
 
             present = sorted({name for *_, name in labels})
             summary = ', '.join(present) if present else 'no faces'
-            print(f'{len(labels)} face(s): {summary}')
+            status = f'{len(labels)} face(s): {summary}'
+            if status != previous_status:
+                print(status)
+                previous_status = status
 
-            # --- door logic: open on any known face, close after a gap ---
+            # Trigger once while a known face remains in view. The Arduino
+            # closes the door independently after five seconds.
             known_present = any(name != 'Unknown' for *_, name in labels)
             now = time.monotonic()
-            if known_present:
-                last_seen = now
-                if not door_open and send_door(ser, 'DOOR,OPEN'):
-                    door_open = True
-                    print('DOOR: OPEN')
-            elif door_open and (now - last_seen) > args.open_sec:
-                if send_door(ser, 'DOOR,CLOSE'):
-                    door_open = False
-                    print('DOOR: CLOSE')
+            if not known_present:
+                triggered = False
+            elif door_target and not triggered and now >= next_door_attempt:
+                triggered = send_door_open(ser, door_socket)
+                next_door_attempt = now + 1.0
+                if triggered:
+                    print('DOOR: OPEN requested')
 
             for (x, y, w, h, name) in labels:
                 color = (0, 255, 0) if name != 'Unknown' else (0, 0, 255)

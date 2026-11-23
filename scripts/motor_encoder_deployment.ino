@@ -3,6 +3,7 @@
  *
  * Serial protocol at 115200 baud:
  *   Jetson -> Arduino: CMD,<front_left>,<front_right>,<rear_left>,<rear_right>\n
+ *   Jetson -> Arduino: DOOR,OPEN\n
  *   Arduino -> Jetson: ENC,<front_left>,<front_right>,<rear_left>,<rear_right>\n
  *
  * Wheel commands are signed PWM values in the range -255..255. A command
@@ -10,6 +11,7 @@
  */
 
 #include <Arduino.h>
+#include <Servo.h>
 
 // Motor driver pins (Arduino Mega). Each wheel has one PWM pin and two
 // direction pins.
@@ -36,6 +38,12 @@
 #define ENC_C_B 49
 #define ENC_D_A 2
 #define ENC_D_B A1
+
+const uint8_t DOOR_SERVO_PIN = A3;
+const unsigned long DOOR_OPEN_MS = 5000;
+Servo doorServo;
+bool doorOpen = false;
+unsigned long doorOpenedAt = 0;
 
 // Stop the motors when commands have not arrived within this interval.
 const unsigned long COMMAND_TIMEOUT_MS = 500;
@@ -261,7 +269,15 @@ void readCommands() {
     if (c == '\n') {
       if (!commandOverflow) {
         commandBuffer[commandLength] = '\0';
-        parseCommand(commandBuffer);
+        if (strcmp(commandBuffer, "DOOR,OPEN") == 0) {
+          if (!doorOpen) {
+            doorServo.write(180);
+            doorOpenedAt = millis();
+            doorOpen = true;
+          }
+        } else {
+          parseCommand(commandBuffer);
+        }
       }
       commandLength = 0;
       commandOverflow = false;
@@ -329,6 +345,9 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENC_C_A), isrEncC, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENC_D_A), isrEncD, CHANGE);
 
+  doorServo.write(0);
+  doorServo.attach(DOOR_SERVO_PIN);
+
   // Do not trigger the safety timeout immediately after startup.
   lastCommandTime = millis();
   lastEncoderReport = millis();
@@ -339,6 +358,10 @@ void loop() {
   readCommands();
 
   unsigned long now = millis();
+  if (doorOpen && now - doorOpenedAt >= DOOR_OPEN_MS) {
+    doorServo.write(0);
+    doorOpen = false;
+  }
   if (now - lastCommandTime >= COMMAND_TIMEOUT_MS) {
     // Fail safe if the Jetson or its ROS node stops communicating.
     stopAll();
