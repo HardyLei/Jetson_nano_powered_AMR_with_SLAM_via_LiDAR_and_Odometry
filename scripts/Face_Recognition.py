@@ -6,7 +6,7 @@ Detects faces (OpenCV Haar), recognises people against the scripts/known_faces/
 folder using `face_recognition`, and triggers the Arduino door servo on A3
 when a known person is seen.
 
-The firmware moves the servo from 0 to 180 degrees for five seconds and
+The firmware moves the servo from 0 to 126 degrees for five seconds and
 returns to 0. It handles the timer even if face recognition stops.
 
 On the Jetson, ./scripts/start_robot.sh starts this script on the host and

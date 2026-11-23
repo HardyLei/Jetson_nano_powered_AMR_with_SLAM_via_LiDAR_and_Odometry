@@ -40,6 +40,7 @@
 #define ENC_D_B A1
 
 const uint8_t DOOR_SERVO_PIN = A3;
+const int DOOR_OPEN_ANGLE = 126;
 const unsigned long DOOR_OPEN_MS = 5000;
 Servo doorServo;
 bool doorOpen = false;
@@ -271,7 +272,7 @@ void readCommands() {
         commandBuffer[commandLength] = '\0';
         if (strcmp(commandBuffer, "DOOR,OPEN") == 0) {
           if (!doorOpen) {
-            doorServo.write(180);
+            doorServo.write(DOOR_OPEN_ANGLE);
             doorOpenedAt = millis();
             doorOpen = true;
           }
