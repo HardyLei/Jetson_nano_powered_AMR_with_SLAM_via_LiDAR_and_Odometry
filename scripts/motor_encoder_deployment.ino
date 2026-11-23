@@ -53,11 +53,12 @@ const unsigned long ENCODER_REPORT_PERIOD_MS = 50;
 // Maximum length of one complete serial command, including its terminator.
 const size_t COMMAND_BUFFER_SIZE = 64;
 
-// Closed-loop speed control, matching motor_encoder_test.ino.
+// Closed-loop wheel speed control.
 // The controller compares encoder counts measured during each 50 ms window
 // with the calibrated target and changes PWM proportionally to the error.
 const unsigned long SPEED_CONTROL_INTERVAL_MS = 50;
-const int TARGET_COUNTS_PER_INTERVAL = 115;
+const int WHEEL_SPEED_DIVISOR = 5;
+const int TARGET_COUNTS_PER_INTERVAL = 115 / WHEEL_SPEED_DIVISOR;
 const float SPEED_CONTROL_KP = 0.9f;
 // The right-side target is raised slightly to compensate for chassis drift.
 const float STEER_TRIM = 0.04f;
@@ -124,7 +125,7 @@ void setMotor(int commandPwm, int &requestedPwm, int &outputPwm,
   // A new command magnitude or direction establishes the new control output.
   // Repeated copies of the same command leave the feedback correction intact.
   if (!active || !wasActive || commandChanged || directionChanged) {
-    outputPwm = abs(commandPwm);
+    outputPwm = abs(commandPwm) / WHEEL_SPEED_DIVISOR;
   }
   writeMotor(active ? (commandPwm < 0 ? -outputPwm : outputPwm) : 0,
              pwmPin, dir1, dir2, forwardHigh);
@@ -203,9 +204,9 @@ void updateSpeedControl() {
   long deltaB = labs(b - lastControlB);
   long deltaC = labs(c - lastControlC);
   long deltaD = labs(d - lastControlD);
-  // Apply steering trim only to the right-side wheels.
+  // Round the right-side target so the trim survives at lower speeds.
   int targetLeft = TARGET_COUNTS_PER_INTERVAL;
-  int targetRight = (int)(TARGET_COUNTS_PER_INTERVAL * (1.0f + STEER_TRIM));
+  int targetRight = (int)(TARGET_COUNTS_PER_INTERVAL * (1.0f + STEER_TRIM) + 0.5f);
 
   if (motorAActive) {
     pwmA = adjustPwm(pwmA, deltaA, targetLeft);
