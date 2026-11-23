@@ -52,6 +52,42 @@ except ImportError:
 
 
 KNOWN_FACES_DIR = Path(__file__).resolve().with_name('known_faces')
+CASCADE_FILENAME = 'haarcascade_frontalface_default.xml'
+SYSTEM_CASCADE_DIRS = (
+    Path('/usr/share/opencv4/haarcascades'),
+    Path('/usr/share/opencv/haarcascades'),
+    Path('/usr/local/share/opencv4/haarcascades'),
+    Path('/usr/local/share/OpenCV/haarcascades'),
+)
+
+
+def load_face_cascade(path):
+    """Find the face detector in either packaged or system OpenCV."""
+    if path is None:
+        packaged_dir = getattr(getattr(cv2, 'data', None), 'haarcascades', None)
+        directories = SYSTEM_CASCADE_DIRS
+        if packaged_dir:
+            directories = (Path(packaged_dir), *directories)
+        candidates = [directory / CASCADE_FILENAME for directory in directories]
+    else:
+        candidates = [path.expanduser()]
+
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        try:
+            cascade = cv2.CascadeClassifier(str(candidate))
+            if not cascade.empty():
+                return cascade
+        except cv2.error:
+            continue
+
+    if path is None:
+        print(f'ERROR: could not load {CASCADE_FILENAME}. '
+              'Install opencv-data or pass --cascade with the XML file path.', file=sys.stderr)
+    else:
+        print(f'ERROR: could not load the Haar cascade at {candidates[0]}.', file=sys.stderr)
+    return None
 
 
 def gstreamer_pipeline(sensor_id=0, capture_width=1280, capture_height=720,
@@ -120,10 +156,8 @@ def send_door_open(ser, door_socket):
 
 def enroll_face(name, args):
     """Capture a face from the camera and save it to known_faces/<name>.jpeg."""
-    cascade = cv2.CascadeClassifier(
-        cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    if cascade.empty():
-        print('ERROR: could not load the Haar cascade.', file=sys.stderr)
+    cascade = load_face_cascade(args.cascade)
+    if cascade is None:
         return 1
 
     cap = cv2.VideoCapture(gstreamer_pipeline(
@@ -192,6 +226,8 @@ def main():
                         help='downscale factor to speed up detection')
     parser.add_argument('--known-dir', default=KNOWN_FACES_DIR,
                         help='reference photo folder (defaults to scripts/known_faces)')
+    parser.add_argument('--cascade', type=Path, metavar='XML',
+                        help='override the OpenCV face detector XML path')
     parser.add_argument('--tolerance', type=float, default=0.6,
                         help='lower = stricter match (0.4-0.6 typical)')
     parser.add_argument('--enroll', metavar='NAME',
@@ -216,10 +252,8 @@ def main():
     if HAS_RECOG and not known_encodings:
         print(f'WARNING: no reference faces loaded from {args.known_dir}.', file=sys.stderr)
 
-    cascade = cv2.CascadeClassifier(
-        cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    if cascade.empty():
-        print('ERROR: could not load the Haar cascade.', file=sys.stderr)
+    cascade = load_face_cascade(args.cascade)
+    if cascade is None:
         return 1
 
     cap = cv2.VideoCapture(gstreamer_pipeline(
