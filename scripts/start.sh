@@ -24,7 +24,7 @@ source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
 
 lidar=/dev/ydlidar
 imu=/dev/myimu
-arduino=/dev/amr
+arduino=
 start_robot=true
 for arg in "$@"; do
     case "$arg" in
@@ -34,6 +34,11 @@ for arg in "$@"; do
         start_robot:=*) start_robot=${arg#*:=} ;;
     esac
 done
+if [[ $launch_file == robot.launch.py && -z $arduino ]]; then
+    echo 'HOST Pass arduino_port:= with the actual Arduino device path.' >&2
+    exit 1
+fi
+arduino=${arduino:-/dev/amr}
 if [[ $launch_file == robot.launch.py || $start_robot == true ]]; then
     for port in "$lidar" "$imu" "$arduino"; do
         if [[ ! -c $port || ! -r $port || ! -w $port ]]; then
@@ -57,9 +62,11 @@ docker exec --workdir /workspace "$AMR_CONTAINER" flock -n /tmp/amr-launch.lock 
     colcon build --executor sequential --symlink-install --packages-ignore ydlidar_sdk
 '
 
+door_socket=build/amr-door.sock
 if [[ $launch_file == robot.launch.py && ${AMR_FACE_RECOGNITION:-1} == 1 ]]; then
     echo 'HOST Starting face recognition on the Jetson.'
-    python3 -u "$AMR_ROOT/scripts/Face_Recognition.py" --no-display &
+    python3 -u "$AMR_ROOT/scripts/Face_Recognition.py" \
+        --door-socket "$AMR_ROOT/ros2_ws/$door_socket" --no-display &
     face_pid=$!
     stop_face_recognition() {
         if jobs -pr | grep -Fxq "$face_pid"; then
@@ -71,5 +78,5 @@ if [[ $launch_file == robot.launch.py && ${AMR_FACE_RECOGNITION:-1} == 1 ]]; the
 fi
 
 amr_exec flock -n --no-fork /tmp/amr-launch.lock \
-    env AMR_DOOR_SOCKET=/workspace/build/amr-door.sock \
+    env "AMR_DOOR_SOCKET=/workspace/$door_socket" \
     ros2 launch amr_bringup "$launch_file" "$@"

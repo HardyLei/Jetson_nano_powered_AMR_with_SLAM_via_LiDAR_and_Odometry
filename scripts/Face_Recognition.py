@@ -10,8 +10,9 @@ The firmware moves the servo from 0 to 180 degrees for five seconds and
 returns to 0. It handles the timer even if face recognition stops.
 
 On the Jetson, ./scripts/start_robot.sh starts this script on the host and
-forwards its DOOR,OPEN requests through the running Arduino bridge. Place
-reference photos in scripts/known_faces/. To skip the camera, start the robot
+forwards its DOOR,OPEN requests through the Arduino bridge, which uses the
+launch's arduino_port argument. Place reference photos in scripts/known_faces/.
+To skip the camera, start the robot
 with AMR_FACE_RECOGNITION=0.
 
 For a standalone test with the Arduino bridge stopped, run on the Jetson host:
@@ -249,8 +250,11 @@ def main():
                         help='lower = stricter match (0.4-0.6 typical)')
     parser.add_argument('--enroll', metavar='NAME',
                         help='save a reference photo as <NAME>.jpeg in the known faces folder')
-    parser.add_argument('--arduino-port',
-                        help='direct serial port for standalone use with the bridge stopped')
+    door_connection = parser.add_mutually_exclusive_group()
+    door_connection.add_argument('--arduino-port',
+                                 help='direct serial port for use with the bridge stopped')
+    door_connection.add_argument('--door-socket', type=Path,
+                                 help='local socket for the running Arduino bridge')
     parser.add_argument('--arduino-baud', type=int, default=115200)
     parser.add_argument('--no-door', action='store_true',
                         help='recognise only; do not open the serial door control')
@@ -287,11 +291,10 @@ def main():
     ser = None
     door_socket = None
     if not args.no_door:
-        if args.arduino_port is None:
-            door_socket = Path(__file__).resolve().parents[1] / 'ros2_ws/build/amr-door.sock'
-        elif not HAS_SERIAL:
+        door_socket = args.door_socket
+        if args.arduino_port and not HAS_SERIAL:
             print('WARNING: pyserial not installed; door control disabled.', file=sys.stderr)
-        else:
+        elif args.arduino_port:
             try:
                 ser = open_verified_arduino(args.arduino_port, args.arduino_baud)
                 print(f'Arduino encoder data confirmed on {args.arduino_port}.')
