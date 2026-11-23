@@ -57,7 +57,7 @@ const size_t COMMAND_BUFFER_SIZE = 64;
 // The controller compares encoder counts measured during each 50 ms window
 // with the calibrated target and changes PWM proportionally to the error.
 const unsigned long SPEED_CONTROL_INTERVAL_MS = 50;
-const int WHEEL_SPEED_DIVISOR = 5;
+const int WHEEL_SPEED_DIVISOR = 3;
 const int TARGET_COUNTS_PER_INTERVAL = 115 / WHEEL_SPEED_DIVISOR;
 const float SPEED_CONTROL_KP = 0.9f;
 // The right-side target is raised slightly to compensate for chassis drift.
