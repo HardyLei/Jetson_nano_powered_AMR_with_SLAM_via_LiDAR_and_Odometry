@@ -139,6 +139,23 @@ def recognize(face_enc, known_encodings, known_names, tolerance):
     return name, float(distances[best])
 
 
+def open_verified_arduino(port, baudrate):
+    """Wait for encoder data before using a standalone serial port."""
+    connection = serial.Serial(
+        port, baudrate, timeout=0.5, write_timeout=0.5, exclusive=True,
+    )
+    try:
+        deadline = time.monotonic() + 8.0
+        while time.monotonic() < deadline:
+            frame = connection.read_until(size=64)
+            if frame.startswith(b'ENC,') and frame.endswith(b'\n'):
+                return connection
+        raise TimeoutError('no complete Arduino encoder frame received in 8 seconds')
+    except (OSError, KeyboardInterrupt):
+        connection.close()
+        raise
+
+
 def send_door_open(ser, door_socket):
     """Send one open request to the bridge or to a standalone Arduino."""
     try:
@@ -276,11 +293,10 @@ def main():
             print('WARNING: pyserial not installed; door control disabled.', file=sys.stderr)
         else:
             try:
-                ser = serial.Serial(
-                    args.arduino_port, args.arduino_baud, write_timeout=0.5, exclusive=True,
-                )
+                ser = open_verified_arduino(args.arduino_port, args.arduino_baud)
+                print(f'Arduino encoder data confirmed on {args.arduino_port}.')
             except OSError as exc:
-                print(f'WARNING: cannot open {args.arduino_port}: {exc}. '
+                print(f'WARNING: Arduino verification failed on {args.arduino_port}: {exc}. '
                       'Door control disabled.', file=sys.stderr)
 
     door_target = args.arduino_port if ser is not None else door_socket
